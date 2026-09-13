@@ -1,5 +1,5 @@
 /** @type {import('tailwindcss').Config} */
-// ModelMatch theme (P38): the Grafana-style palette — desaturated status trio, one
+// Driftplain theme (P38): the Grafana-style palette — desaturated status trio, one
 // blue accent, flat dark surfaces — applied app-wide. Monospace for money, tokens, ids.
 //
 // Shared workspace surfaces and card geometry live in src/index.css.

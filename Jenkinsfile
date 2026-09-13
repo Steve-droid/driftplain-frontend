@@ -1,4 +1,4 @@
-// modelmatch-frontend CI/CD pipeline (P17 — the first real product pipeline; test
+// driftplain-frontend CI/CD pipeline (P17 — the first real product pipeline; test
 // taxonomy refined in P31).
 //
 // Runs on the graded persistent Jenkins controller as a MULTIBRANCH job. Every branch
