@@ -11,9 +11,9 @@ import { test, expect } from "@playwright/test";
 //
 // SELF-SKIPS when http://localhost:8000 is unreachable or unseeded, so it's a no-op in
 // plain CI and only runs when a backend is already up. To run it fully:
-//   1) cd modelmatch-backend && docker compose up -d        # Postgres + app on :8000
+//   1) cd driftplain-backend && docker compose up -d        # Postgres + app on :8000
 //   2) uv run python -c "from app.db import SessionLocal; from app.catalog.seed import load_seed; s=SessionLocal(); load_seed(s); s.commit()"
-//   3) cd ../modelmatch-frontend && npx playwright test --project=real-stack
+//   3) cd ../driftplain-frontend && npx playwright test --project=real-stack
 //
 // CI CONTRACT: the P17 Jenkins E2E stage sets E2E_REQUIRE_BACKEND=true. With that flag an
 // unreachable backend or an unseeded catalog is a HARD FAILURE, not a skip — the required

@@ -1,13 +1,15 @@
 # Driftplain — Frontend
 
+[Website](https://driftplain.dev) · [Frontend](https://github.com/Steve-droid/driftplain-frontend) · [Backend](https://github.com/Steve-droid/driftplain-backend) · [Infra](https://github.com/Steve-droid/driftplain-infra) · [GitOps](https://github.com/Steve-droid/driftplain-gitops)
+
 > **P38r — shipped September 12, 2026:** Driftplain is live at **https://driftplain.dev**, with **https://api.driftplain.dev** as its runtime API. Trusted HTTPS, Google domain ownership, published Google branding and real sign-in are verified. Modicum/sslip.io endpoints and operational identifiers remain compatible. FE/BE 1.0.24, agents 1.1.3; runtime cutover GitOps v0.18.22.
 
 
-> Driftplain was previously Modicum / ModelMatch. Repository and infrastructure identifiers retain `modelmatch` for compatibility.
+> Driftplain was previously Modicum / ModelMatch. The four public repositories use `driftplain-*`; existing infrastructure, images, database names, metrics and CI credential/environment identifiers retain `modelmatch` for compatibility.
 
 > React SPA for **Driftplain** — the recommender form, the project + Jenkins onboarding wizard, the
 > savings dashboard, and the grounded chat panel. Part of the
-> [Driftplain portfolio build](../CLAUDE.md); full spec in [`../docs/planning/`](../docs/planning/).
+> four-repository Driftplain project linked above.
 
 ## Table of Contents
 
@@ -59,7 +61,7 @@ what the backend returns:
 The CI snippet the wizard hands out defaults to **Anthropic Haiku** on the user's key. The FE never sees
 provider keys. The demo also exercises a **Gemini free-tier** path — and because Gemini's free tier
 **trains on inputs and allows human review**, it is fed **only non-confidential demo fixtures** (Anthropic
-and Bedrock don't train on inputs). See the [runbook](../modelmatch-backend/docs/runbook.md) for the full
+and Bedrock don't train on inputs). See the [runbook](https://github.com/Steve-droid/driftplain-backend/blob/main/docs/runbook.md) for the full
 product story.
 
 ## Architecture
@@ -68,13 +70,11 @@ The frontend is the presentation tier of a 3-tier app (**React SPA → FastAPI �
 It talks to the backend over **HTTPS/JSON only** and is served as static assets by **nginx**
 (nginx-unprivileged, never from the backend's `/static`). The API base URL and other config come from the
 **environment** — `VITE_*` vars at dev time, a templated `/config.js` injected at container start in
-production — so **nothing is hardcoded**. Authoritative spec:
-[`../docs/planning/architecture.md`](../docs/planning/architecture.md) (§4.1 dashboard, §4.2 chat, §10
-pages).
+production — so **nothing is hardcoded**.
 
 In the cluster the SPA is reachable at the public ingress host **`app.<ip>.sslip.io`** and calls the
 backend at **`api.<ip>.sslip.io`** — both derive from the single ingress ELB IP (see the
-[gitops repo](../modelmatch-gitops/README.md#ingress-host-recompute-p15-runbook)).
+[gitops repo](https://github.com/Steve-droid/driftplain-gitops/blob/main/README.md#ingress-host-recompute-p15-runbook)).
 
 ## Technology Stack
 
@@ -90,7 +90,7 @@ backend at **`api.<ip>.sslip.io`** — both derive from the single ingress ELB I
 ## Repository Structure
 
 ```
-modelmatch-frontend/
+driftplain-frontend/
 ├── src/
 │   ├── pages/          # Login · Onboarding (form → pick → project → Jenkins) · Dashboard
 │   ├── components/     # dashboard widgets (KpiCard, SavingsAreaChart, RunsTable, QualityTrend, …),
@@ -122,7 +122,7 @@ modelmatch-frontend/
 > **Status: application feature-complete (v1.0.x).** Login + auth gate, the savings dashboard + grounded
 > chat panel, the recommender / project / Jenkins onboarding wizard, and full project lifecycle
 > (defer-create, URL validation, edit / re-pick / delete / CI-token regenerate) are all in. The
-> deployed image is wired into the cluster via the [gitops](../modelmatch-gitops/README.md) umbrella.
+> deployed image is wired into the cluster via the [gitops](https://github.com/Steve-droid/driftplain-gitops/blob/main/README.md) umbrella.
 
 ```bash
 cp .env.example .env   # set VITE_API_BASE_URL (defaults to http://localhost:8000)
@@ -144,7 +144,7 @@ npm run e2e            # Playwright happy-path (hermetic; auto-starts the dev se
 ```
 
 Point `VITE_API_BASE_URL` at a running backend (see the backend README /
-[runbook](../modelmatch-backend/docs/runbook.md) for `docker compose up`). In production the API base URL
+[runbook](https://github.com/Steve-droid/driftplain-backend/blob/main/docs/runbook.md) for `docker compose up`). In production the API base URL
 is injected **at container start** via a templated `/config.js` served by nginx — nothing is hardcoded.
 
 ### End-to-end tests (Playwright)
@@ -174,11 +174,11 @@ for local integration runs.
 
 ```bash
 docker build -t modelmatch-frontend:latest .
-docker build -t modelmatch-backend:latest ../modelmatch-backend
+docker build -t modelmatch-backend:latest ../driftplain-backend
 JWT_SECRET=$(openssl rand -hex 32) docker compose up -d   # FE :8080 · BE :8000 · db
 ```
 
-**New here?** The cross-cutting [Runbook & Demo Walkthrough](../modelmatch-backend/docs/runbook.md)
+**New here?** The cross-cutting [Runbook & Demo Walkthrough](https://github.com/Steve-droid/driftplain-backend/blob/main/docs/runbook.md)
 covers the product story, the two-surface model rule, env reference, and an end-to-end demo script.
 
 ## Configuration
@@ -213,7 +213,7 @@ graph LR
     K --> L[Deploy<br/>gitops bump · main]
 ```
 
-The **Deploy** stage bumps `frontend.image.tag` in the [gitops](../modelmatch-gitops) umbrella values;
+The **Deploy** stage bumps `frontend.image.tag` in the [gitops](https://github.com/Steve-droid/driftplain-gitops) umbrella values;
 **ArgoCD** syncs it — this repo never `kubectl apply`s.
 
 ## Conventions

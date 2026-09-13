@@ -13,6 +13,9 @@
 #   CORS_ALLOW_ORIGINS             the SPA origin the backend allows
 #   FRONTEND_PORT, BACKEND_PORT    host ports (default 8080 / 8000)
 
+# Preserve the existing Compose project and volumes after the checkout rename.
+name: modelmatch-frontend
+
 services:
   db:
     image: postgres:16
