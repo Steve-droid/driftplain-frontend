@@ -5,7 +5,6 @@ import { ApiError, setToken } from "../api/client";
 import { AuthLayout } from "../components/AuthLayout";
 import { GoogleSignIn } from "../components/GoogleSignIn";
 import { PasswordField } from "../components/PasswordField";
-import { DemoNotice } from "../components/DemoNotice";
 
 // Sign-up screen. Creates the account, then logs in to obtain a JWT (register itself
 // returns the new user, not a token) and hands off to the app — same auto-land as Login.
@@ -73,7 +72,6 @@ export function Register({
           <p className="mt-3 text-sm leading-relaxed text-muted">Your next CI agent starts here.</p>
         </div>
 
-        <DemoNotice />
         <GoogleSignIn onAuthed={onAuthed} />
 
         <form onSubmit={handleSubmit} className="flex flex-col gap-5">

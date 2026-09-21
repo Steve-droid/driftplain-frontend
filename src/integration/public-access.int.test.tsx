@@ -60,7 +60,7 @@ it("shows a full-registration error rather than an email-collision message", asy
   const detail = { code: "registration_capacity_reached", message: "Registration is currently full. Existing users can still sign in." };
   server.use(http.post(`${BASE}/auth/register`, () => HttpResponse.json({ detail }, { status: 409 })));
   render(<Register onAuthed={vi.fn()} onSignIn={vi.fn()} />);
-  expect(screen.getByText(/temporary portfolio demo/)).toBeInTheDocument();
+  expect(screen.queryByText(/temporary portfolio demo/)).not.toBeInTheDocument();
   fireEvent.change(screen.getByLabelText("Email"), { target: { value: "v@example.com" } });
   fireEvent.change(screen.getByLabelText("Password"), { target: { value: "test-password" } });
   fireEvent.change(screen.getByLabelText("Confirm password"), { target: { value: "test-password" } });
