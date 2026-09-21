@@ -2,8 +2,12 @@
 
 [driftplain.dev](https://driftplain.dev) · **Frontend** · [Backend](https://github.com/Steve-droid/driftplain-backend) · [Infra](https://github.com/Steve-droid/driftplain-infra) · [GitOps](https://github.com/Steve-droid/driftplain-gitops)
 
-Driftplain picks a cheaper LLM for code review from benchmark data, runs it as a review agent in
-the user's CI on the user's own API key, and shows the money saved while review quality holds.
+Driftplain picks a cheaper LLM for code review from benchmark data and runs it in the user's CI
+on the user's own API key. There are two agents. The review agent makes one API call with the PR
+diff and the user's review preferences. The security agent runs an agentic loop with OpenCode
+over the checkout and reports vulnerabilities. The dashboard shows the money saved while review
+quality holds.
+
 This repo is the React SPA. It talks to the backend over HTTPS/JSON and is served as static
 files by nginx.
 
