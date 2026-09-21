@@ -25,11 +25,10 @@ for (const width of [1440, 390]) {
   });
 }
 
-test("temporary-demo notice appears before either signup method", async ({ page }) => {
+test("no temporary-demo notice on sign-in or sign-up (maintained service since September 2026)", async ({ page }) => {
   await mockBackend(page);
   await page.goto("/");
-  await expect(page.getByText(/temporary portfolio demo/)).toBeVisible();
+  await expect(page.getByText(/temporary portfolio demo/)).toHaveCount(0);
   await page.getByRole("button", { name: "Sign up" }).click();
-  await expect(page.getByText(/temporary portfolio demo/)).toBeVisible();
-  await page.screenshot({ path: "test-results/p38o-signup-notice.png", fullPage: true });
+  await expect(page.getByText(/temporary portfolio demo/)).toHaveCount(0);
 });
