@@ -1,23 +1,22 @@
 # CLAUDE.md — driftplain-frontend
 
-## Claude Code continuation — HM3 scope — September 15, 2026
+## HM8 done — September 22, 2026
 
-Read [the HM3 handoff](../docs/session-handoffs/E21-home-hosting/2026-09-15-hm3-backup-restore.md)
-first and [umbrella instructions](../CLAUDE.md). HM2 is complete; HM3 is the encrypted
-production-backup/private-CNPG-restore slice. Current requirements are in
-[02-showcase-backlog.md](../docs/planning/02-showcase-backlog.md) and
-[HLD](../docs/planning/hld.md), replacing the removed architecture paths below.
+Follow the [umbrella instructions](../CLAUDE.md). The home cluster is the only runtime and
+serves driftplain.dev through the Cloudflare tunnel (HM7). Home runs frontend 1.0.24 by digest
+from public GHCR. Requirements are in
+[02-showcase-backlog.md](../docs/planning/02-showcase-backlog.md) and the
+[HLD](../docs/planning/hld.md). Next: HM6 wording (maintained-service and privacy text in the
+UI), then P39.
 
-No frontend feature, runtime URL, OAuth, image release or public routing change is expected
-in HM3. FE/BE remains 1.0.24. Preserve existing identities/data/CI-token behavior and leave
-AWS production serving driftplain.dev/api.driftplain.dev. Home app validation is HM4;
-maintained-service/privacy wording is HM6; actual cutover is HM7. Do not claim home is live
-or rewrite the product/privacy text before the deployment supports it.
+ECR was deleted at HM8. A `vX.Y.Z` tag runs
+[`release-image.yml`](.github/workflows/release-image.yml), which pushes
+`ghcr.io/steve-droid/modelmatch-frontend:X.Y.Z`, refuses to overwrite a published tag and prints
+the digest to pin in the gitops home profile. The `Jenkinsfile` is kept for reference only.
 
-Jenkins setup captures metadata and generates integration instructions; provider keys and
-CI tokens stay in the user's Jenkins, not backend-stored BYOK refs. Public GHCR for both
-agents and Cloudflare full-DNS Tunnel are selected but not implemented here. Use focused
-fake tests only if this repo needs an actual relevant change. No paid LLM calls.
+Jenkins setup captures metadata and generates integration instructions; provider keys and CI
+tokens stay in the user's Jenkins. Preserve existing identities, data and CI-token behavior. Use
+focused fake tests for any real change. No paid LLM calls.
 
 **Current working preference (Steve, September 15):** keep progressing and pause only
 for critical architectural decisions. Plan, use focused tests for new behavior, verify and
@@ -29,8 +28,8 @@ or additional tasks. Keep answers concise.
 
 > Driftplain was previously Modicum / ModelMatch. The four public repositories use `driftplain-*`; existing infrastructure, images, database names, metrics and CI credential/environment identifiers retain `modelmatch` for compatibility.
 
-**Status: ACTIVE.** React SPA for Driftplain. See the umbrella `../CLAUDE.md` and the spec in
-`../docs/planning/` (esp. `architecture.md` §4.1 dashboard + §4.2 chat, and §10 pages).
+**Status: ACTIVE.** React SPA for Driftplain. See the umbrella `../CLAUDE.md` and the design in
+`../docs/planning/hld.md`.
 
 ## Responsibilities
 
