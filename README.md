@@ -26,7 +26,7 @@ gap is the savings, cost per run colored by quality, token usage, a quality tren
 table. Savings count only while the quality gate holds.
 
 **Chat panel.** Opens with an automatic "explain my spend" summary and answers follow-ups with a
-visible retrieval trace. At home the backend runs without an LLM, so the panel says the assistant
+visible retrieval trace. On the home server the backend runs without an LLM, so the panel says the assistant
 is offline.
 
 **Login and registration.** Password login and Google sign-in. Google availability comes from the
