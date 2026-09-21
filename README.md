@@ -192,6 +192,13 @@ All config is read from the environment — **no hardcoded URLs or secrets**.
 
 ## CI/CD Pipeline
 
+> **Since September 22, 2026 (E21/HM8):** the Jenkins controller and ECR are retired with the AWS
+> platform. Releases publish to **public GHCR** from GitHub Actions: run the tests locally, merge,
+> push an annotated `vX.Y.Z` tag → [`release-image.yml`](.github/workflows/release-image.yml)
+> builds `linux/amd64` and pushes `ghcr.io/steve-droid/modelmatch-frontend:X.Y.Z`. A release tag is
+> never overwritten; the job summary prints the digest to pin in the gitops home profile. The
+> Jenkins pipeline below is the graded history.
+
 A dedicated Jenkins **multibranch** pipeline ([`Jenkinsfile`](Jenkinsfile), P17), independent of the
 backend's. Every branch runs the full validation flow; only `main` runs the release tail. No static AWS
 keys — the controller uses its EC2 instance role for ECR, and SSH deploy keys (referenced by credential
