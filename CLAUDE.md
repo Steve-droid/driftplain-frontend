@@ -3,11 +3,11 @@
 ## HM8 done — September 22, 2026
 
 Follow the [umbrella instructions](../CLAUDE.md). The home cluster is the only runtime and
-serves driftplain.dev through the Cloudflare tunnel (HM7). Home runs frontend 1.0.24 by digest
+serves driftplain.dev through the Cloudflare tunnel (HM7). Home runs frontend 1.0.26 by digest
 from public GHCR. Requirements are in
 [02-showcase-backlog.md](../docs/planning/02-showcase-backlog.md) and the
-[HLD](../docs/planning/hld.md). Next: HM6 wording (maintained-service and privacy text in the
-UI), then P39.
+[HLD](../docs/planning/hld.md). HM6 is done: 1.0.25 removed the temporary-demo notice and 1.0.26
+rewrote `public/privacy.html` for the maintained home deployment. Next: P39.
 
 ECR was deleted at HM8. A `vX.Y.Z` tag runs
 [`release-image.yml`](.github/workflows/release-image.yml), which pushes
