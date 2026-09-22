@@ -11,8 +11,8 @@
 #
 # Caller provides via env (the pipeline sets these; local defaults are fine):
 #   COMPOSE_PROJECT_NAME   isolates networks/volumes for concurrent builds (default mm-e2e)
-#   BACKEND_IMAGE          backend image ref   (default modelmatch-backend:latest)
-#   FRONTEND_IMAGE         frontend image ref under test (default modelmatch-frontend:latest)
+#   BACKEND_IMAGE          backend image ref   (default driftplain-backend:latest)
+#   FRONTEND_IMAGE         frontend image ref under test (default driftplain-frontend:latest)
 #   JWT_SECRET             REQUIRED for `up` (compose rejects the placeholder)
 #   BACKEND_PORT           host port to poll for /healthz (default 8000)
 #   FRONTEND_PORT          host port the FE image binds (default 8080)

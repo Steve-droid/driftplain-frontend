@@ -24,7 +24,7 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  IMAGE: ghcr.io/steve-droid/modelmatch-frontend
+  IMAGE: ghcr.io/steve-droid/driftplain-frontend
 
 jobs:
   publish:
@@ -65,6 +65,9 @@ jobs:
             echo
             echo "- digest: \`$digest\`"
             echo "- revision: \`$GITHUB_SHA\`"
-            echo "- gitops home profile: set \`frontend.image.digest\` in \`charts/modelmatch/values-home-server.yaml\` to that digest"
+            echo "- gitops file: \`charts/modelmatch/values-home-server.yaml\`"
+            echo "- set \`frontend.image.repository\` to \`driftplain-frontend\`"
+            echo "- set \`frontend.image.digest\` to \`$digest\`"
+            echo "- first publication: make the package public and verify an anonymous pull before deployment"
           } >> "$GITHUB_STEP_SUMMARY"
           echo "$IMAGE@$digest"

@@ -34,7 +34,7 @@ services:
   # One-off: build the schema + seed the catalog with the SAME backend image, then exit.
   # (Migrations are a separate step, never on serve-startup — mirrors the K8s migrate-Job.)
   migrate:
-    image: ${BACKEND_IMAGE:-modelmatch-backend:latest}
+    image: ${BACKEND_IMAGE:-driftplain-backend:latest}
     command:
       - sh
       - -c
@@ -48,7 +48,7 @@ services:
     restart: "no"
 
   backend:
-    image: ${BACKEND_IMAGE:-modelmatch-backend:latest}
+    image: ${BACKEND_IMAGE:-driftplain-backend:latest}
     environment:
       DATABASE_URL: postgresql+psycopg://modelmatch:modelmatch@db:5432/modelmatch
       JWT_SECRET: ${JWT_SECRET:?set JWT_SECRET}
@@ -74,7 +74,7 @@ services:
       start_period: 5s
 
   frontend:
-    image: ${FRONTEND_IMAGE:-modelmatch-frontend:latest}
+    image: ${FRONTEND_IMAGE:-driftplain-frontend:latest}
     environment:
       API_BASE_URL: ${API_BASE_URL:-http://localhost:8000}
     ports:
