@@ -1,5 +1,19 @@
 # CLAUDE.md — driftplain-frontend
 
+## Application image names (September 22, 2026)
+
+New releases use `ghcr.io/steve-droid/driftplain-backend`, `driftplain-frontend`,
+`driftplain-agent` and `driftplain-agent-security`. Follow the
+[image naming policy](https://github.com/Steve-droid/driftplain/blob/main/IMAGE-NAMING.md).
+Continue each existing version sequence; do not reset versions, reuse published tags or
+delete old `modelmatch-*` packages. The verified starting points are backend 1.1.1,
+frontend 1.1.0 and agents 1.1.3; check fresh tags before choosing the next version.
+
+Keep existing production image pins until the new packages are published, public and
+verified by an anonymous pull. Update both repository and digest for the first deployment
+under a new name. Preserve Kubernetes, database, volume and CI credential/environment names.
+This policy overrides older image-naming statements below; it does not authorize a deployment.
+
 ## HM8 done — September 22, 2026
 
 Follow the [umbrella instructions](../CLAUDE.md). The home cluster is the only runtime and
@@ -11,7 +25,7 @@ rewrote `public/privacy.html` for the maintained home deployment. Next: P39.
 
 ECR was deleted at HM8. A `vX.Y.Z` tag runs
 [`release-image.yml`](.github/workflows/release-image.yml), which pushes
-`ghcr.io/steve-droid/modelmatch-frontend:X.Y.Z`, refuses to overwrite a published tag and prints
+`ghcr.io/steve-droid/driftplain-frontend:X.Y.Z`, refuses to overwrite a published tag and prints
 the digest to pin in the gitops home profile. The `Jenkinsfile` is kept for reference only.
 
 Jenkins setup captures metadata and generates integration instructions; provider keys and CI
@@ -26,7 +40,7 @@ for this continuation. No paid LLM calls, public cutover, production teardown or
 source changes without explicit scope. No subagents/review agents, unsolicited diagrams
 or additional tasks. Keep answers concise.
 
-> Driftplain was previously Modicum / ModelMatch. The four public repositories use `driftplain-*`; existing infrastructure, images, database names, metrics and CI credential/environment identifiers retain `modelmatch` for compatibility.
+> Driftplain was previously Modicum / ModelMatch. The four public repositories use `driftplain-*`; existing infrastructure, database names, metrics and CI credential/environment identifiers retain `modelmatch` for compatibility. New image releases follow the policy above.
 
 **Status: ACTIVE.** React SPA for Driftplain. See the umbrella `../CLAUDE.md` and the design in
 `../docs/planning/hld.md`.

@@ -65,8 +65,8 @@ Clone the backend next to this repo as `../driftplain-backend`. Add a random `JW
 of at least 32 characters to this repo's `.env`, then build and start the images:
 
 ```bash
-docker build -t modelmatch-frontend:latest .
-docker build -t modelmatch-backend:latest ../driftplain-backend
+docker build -t driftplain-frontend:latest .
+docker build -t driftplain-backend:latest ../driftplain-backend
 docker compose up -d
 ```
 
@@ -96,8 +96,10 @@ the backend is unavailable on port 8000.
 ## Releases and deployment
 
 A `vX.Y.Z` tag triggers the [image release workflow](.github/workflows/release-image.yml),
-which publishes `ghcr.io/steve-droid/modelmatch-frontend:X.Y.Z` for Linux amd64. The image
-keeps the project's original `modelmatch` name.
+which publishes `ghcr.io/steve-droid/driftplain-frontend:X.Y.Z` for Linux amd64.
+Existing `modelmatch-frontend` images remain
+available, and version numbers continue from the previous package. See the
+[image naming policy](https://github.com/Steve-droid/driftplain/blob/main/IMAGE-NAMING.md).
 
 The [GitOps repo](https://github.com/Steve-droid/driftplain-gitops) pins the image digest and
 deploys it through ArgoCD to the home K3s cluster. Publishing an image does not deploy it.
