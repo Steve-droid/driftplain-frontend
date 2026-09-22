@@ -30,8 +30,8 @@
       <header>
         <a href="/" aria-label="Driftplain home">Driftplain</a>
         <h1>Privacy policy</h1>
-        <p class="muted">Last updated: 12 September 2026</p>
-        <p>Driftplain is a portfolio application operated by Steve Levit. It helps you choose an
+        <p class="muted">Last updated: 22 September 2026</p>
+        <p>Driftplain is a maintained application operated by Steve Levit. It helps you choose an
           AI model for CI code review or security analysis and compare cost savings with quality signals.</p>
       </header>
       <section aria-labelledby="information">
@@ -61,15 +61,18 @@
           so your browser communicates with Google on the sign-in and registration screens.
           Google's handling of that interaction is covered by its
           <a href="https://policies.google.com/privacy">privacy policy</a>.</p>
-        <p>Amazon Web Services hosts the application and its data in the Mumbai region
-          (ap-south-1). Chat questions and relevant savings and catalog context, and catalog
-          ingestion documents, are processed by Amazon Bedrock; model processing may use
-          regional routing beyond Mumbai.</p>
+        <p>The application and its database run on a server operated by Steve Levit in Israel.
+          Traffic reaches it through Cloudflare, which proxies requests and therefore sees
+          connection details such as IP addresses. Encrypted database backups and catalog source
+          documents are stored in Amazon Web Services object storage in the Mumbai region
+          (ap-south-1). The in-app assistant is currently offline on this deployment, so chat
+          questions are not sent to an AI provider; if it is enabled, chat questions and catalog
+          ingestion documents would be processed by Amazon Bedrock.</p>
         <p>The CI agent runs in your own CI environment using your provider key. It sends code
           and instructions to the model provider you choose, under that provider's policies.
           Driftplain receives the run results you submit, including findings that may contain code
           details. Keep credentials in your CI credential store and avoid submitting confidential
-          information to this portfolio service.</p>
+          information to this service.</p>
         <p>Driftplain does not sell your personal information, use Google account information for
           advertising, or use it to train AI models. Google account identifiers are used for
           authentication, not included in model prompts.</p>
@@ -86,9 +89,9 @@
       </section>
       <section aria-labelledby="retention">
         <h2 id="retention">Retention and deletion requests</h2>
-        <p>Account and workspace records are retained until removed by the operator or the
-          portfolio environment is retired. There is currently no automatic account-expiry
-          schedule or self-service account-deletion screen. Operational logs and backup copies
+        <p>Account and workspace records are kept until you ask for their removal or the
+          operator removes them. There is no automatic account-expiry schedule and no
+          self-service account-deletion screen. Operational logs and backup copies
           may have different lifetimes from active application records.</p>
         <p>To request access, correction or deletion of your account and associated data, email
           <a href="mailto:stevelevit230@gmail.com">stevelevit230@gmail.com</a> from the address
