@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
+import { CatalogApp, CatalogNav } from "./catalog/CatalogApp";
+import { useLocation } from "./catalog/navigation";
 import { Loader2 } from "lucide-react";
 import { ApiError, clearToken, getToken } from "./api/client";
 import { listProjects } from "./api/projects";
@@ -19,7 +21,7 @@ type Phase = "loading" | "home" | "onboarding" | "dashboard";
 // (project) API validates the session before showing the hub. A 401 clears the token →
 // Login. ("Agent" is the user-facing name for a project running the CI code-review
 // agent — the data/types/API stay `project`.)
-export function App() {
+function AuthenticatedApp() {
   const [authed, setAuthed] = useState(() => getToken() !== null);
   // Which signed-out screen to show. Toggled by the Login/Register footer links; only
   // consulted while !authed (the auth gate below). Reset to "login" on sign-out
@@ -40,7 +42,7 @@ export function App() {
   }, [cancel]);
 
   const handleAuthed = () => {
-    window.history.replaceState({ mmPhase: "home" }, "");
+    window.history.replaceState({ mmPhase: window.location.pathname === "/setup" ? "onboarding" : window.location.pathname === "/projects" ? "dashboard" : "home" }, "");
     setPhase("loading");
     setAuthed(true);
   };
@@ -90,7 +92,7 @@ export function App() {
       const restored: Phase =
         saved === "dashboard" || saved === "onboarding" || saved === "home"
           ? saved
-          : "home";
+          : window.location.pathname === "/setup" ? "onboarding" : window.location.pathname === "/projects" ? "dashboard" : "home";
       // Seed the landing history entry only when there isn't one yet (replace, not push,
       // so Back from home leaves the app cleanly); on a reload we keep the saved entry.
       if (saved == null) window.history.replaceState({ mmPhase: restored }, "");
@@ -172,4 +174,12 @@ export function App() {
       onUnauthorized={handleUnauthorized}
     /></PageSurface>
   );
+}
+
+
+export function App() {
+  const location = useLocation();
+  const path = location.split("?")[0];
+  const publicRoute = /^\/(benchmarks|models|compare|evidence)(\/|$)/.test(path);
+  return publicRoute ? <><CatalogNav /><CatalogApp location={location} /></> : <AuthenticatedApp key={path} />;
 }

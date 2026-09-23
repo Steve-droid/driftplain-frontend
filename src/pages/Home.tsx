@@ -1,3 +1,4 @@
+import { Link } from "../catalog/navigation";
 import { BRAND_NAME } from "../lib/brand";
 import { LogOut } from "lucide-react";
 import { WelcomeSection } from "../components/home/WelcomeSection";
@@ -19,6 +20,11 @@ export function Home({ onViewAgents, onCreateAgent, onLogout }: {
           </span>
           <span className="font-semibold tracking-tight">{BRAND_NAME}</span>
         </div>
+        <nav aria-label="Main navigation" className="flex flex-wrap gap-3 px-3 text-xs sm:gap-6 sm:text-sm">
+          <Link href="/benchmarks">Explore Benchmarks</Link>
+          <button onClick={onCreateAgent}>Set Up CI</button>
+          <button onClick={onViewAgents}>My Projects</button>
+        </nav>
         <button onClick={onLogout} aria-label="Log out"
           className="flex items-center gap-2 rounded-md border border-border bg-panel px-3 py-1.5 text-sm text-muted transition-colors hover:border-muted hover:text-gray-100">
           <LogOut size={15} />

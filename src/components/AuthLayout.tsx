@@ -1,3 +1,4 @@
+import { Link } from "../catalog/navigation";
 import { BRAND_NAME } from "../lib/brand";
 import type { ReactNode } from "react";
 import { ArrowUpRight } from "lucide-react";
@@ -36,6 +37,7 @@ export function AuthLayout({ children }: { children: ReactNode }) {
       <div className="auth-form-panel">
         <div className="w-full max-w-sm">
           {children}
+          <p className="mt-6 text-center text-sm"><Link href="/benchmarks" className="text-accent">Explore Benchmarks — no account needed</Link></p>
           <p className="mt-6 text-center text-xs text-muted">
             <a href="/privacy.html" className="underline underline-offset-4 hover:text-accent">Privacy policy</a>
           </p>
