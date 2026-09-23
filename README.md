@@ -104,3 +104,27 @@ available, and version numbers continue from the previous package. See the
 The [GitOps repo](https://github.com/Steve-droid/driftplain-gitops) pins the image digest and
 deploys it through ArgoCD to the home K3s cluster. Publishing an image does not deploy it.
 The `Jenkinsfile` retains the build and test pipeline used by the former AWS Jenkins controller.
+
+### Public benchmark explorer (B5 — September 24, 2026)
+
+Anonymous `/benchmarks`, `/benchmarks/:id`, `/models`, `/models/:id`, `/evidence` and
+`/compare` routes use `/catalog/v1` on the configured API base. Public requests omit both
+JWT headers and browser credentials; they never probe projects. The root authentication
+and existing CI/project flows remain compatible. `/setup` and `/projects` enter those flows.
+
+The explorer requires the B5 public metadata contract (backend 1.4.0+). All active evidence
+is browseable independent of CI support. Historical/legacy rows remain available using
+`view=history`. Unresolved labels are searchable without creating canonical model identities.
+Runtime support cannot be inferred from catalog deployments; B6 owns that separate contract.
+
+URL parameters preserve filters, opaque cursors, up to four `compare` choices (`m<ID>` for a
+canonical model, `o<ID>` for an exact source observation), explicit observation choices and
+chart scope. Source-row choices always pin the exact observation, including history.
+Comparisons require matching version, protocol, evaluator, snapshot, metric and coverage.
+Unknown provenance isolates rows. Values are not averaged across benchmarks or maximized
+across configurations; missing values are never zero. Charts share the table's values/units.
+
+Run `npm test`, `npm run test:integration`, `npm run typecheck`, `npm run lint`, `npm run build`,
+then `npx playwright test --config playwright.config.catalog.ts` (desktop + mobile mocks) and
+`npx playwright test --config playwright.config.public-access.ts` (existing public/auth flows).
+All are local/fake. Publication does not deploy the explorer or import production data.
