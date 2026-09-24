@@ -1,3 +1,4 @@
+import { usageFixture } from "../src/usage/fixtures";
 import type { Page, Route } from "@playwright/test";
 
 // A tiny stateful mock of the Driftplain backend for the hermetic happy path. It
@@ -224,6 +225,7 @@ export async function mockBackend(page: Page): Promise<MockHandle> {
     if (path === "/auth/me" && method === "GET") {
       return json(route, { id: 1, email: "operator@example.com", chatEnabled: true });
     }
+    if (/^\/projects\/\d+\/usage\/v1$/.test(path) && method === "GET") return json(route, usageFixture);
     // --- auth ---
     if (path === "/auth/google/config" && method === "GET") {
       return json(route, { enabled: false });

@@ -1,3 +1,4 @@
+import { usageFixture } from "../usage/fixtures";
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, expect, it, vi } from "vitest";
 import { http, HttpResponse } from "msw";
@@ -5,7 +6,7 @@ import { server } from "./msw.setup";
 import { Dashboard } from "../pages/Dashboard";
 import { Register } from "../pages/Register";
 import { apiPost } from "../api/client";
-import { chatHistoryFixture, projectsFixture, savingsFixture } from "../test/fixtures";
+import { chatHistoryFixture, projectsFixture } from "../test/fixtures";
 
 const BASE = "http://localhost:8000";
 let historyCalls: number;
@@ -13,7 +14,7 @@ beforeEach(() => {
   historyCalls = 0;
   server.use(
     http.get(`${BASE}/projects`, () => HttpResponse.json(projectsFixture)),
-    http.get(`${BASE}/projects/:id/savings`, () => HttpResponse.json(savingsFixture)),
+    http.get(`${BASE}/projects/:id/usage/v1`, () => HttpResponse.json(usageFixture)),
     http.get(`${BASE}/projects/:id/chat`, () => { historyCalls++; return HttpResponse.json(chatHistoryFixture); }),
     http.get(`${BASE}/auth/google/config`, () => HttpResponse.json({ enabled: false })),
   );
@@ -22,7 +23,7 @@ beforeEach(() => {
 it("renders an ordinary dashboard without a chatbot or history requests", async () => {
   server.use(http.get(`${BASE}/auth/me`, () => HttpResponse.json({ id: 2, email: "v@example.com", chatEnabled: false })));
   const { container } = render(<Dashboard />);
-  await screen.findByText("Cumulative saved");
+  await screen.findByText("Usage and estimated cost");
   expect(historyCalls).toBe(0);
   expect(screen.queryByRole("textbox")).not.toBeInTheDocument();
   expect(container.querySelector('[class*="_380px"]')).toBeNull();
@@ -37,7 +38,7 @@ it("waits for operator capability before fetching chat and hides on revocation",
     return HttpResponse.json({ id: 1, email: "operator@example.com", chatEnabled: enabled });
   }));
   render(<Dashboard />);
-  await screen.findByText("Cumulative saved");
+  await screen.findByText("Usage and estimated cost");
   expect(historyCalls).toBe(0);
   await act(async () => resolve());
   await waitFor(() => expect(historyCalls).toBe(1));
@@ -51,7 +52,7 @@ it("waits for operator capability before fetching chat and hides on revocation",
 it("fails closed when capabilities cannot be loaded", async () => {
   server.use(http.get(`${BASE}/auth/me`, () => new HttpResponse(null, { status: 503 })));
   render(<Dashboard />);
-  await screen.findByText("Cumulative saved");
+  await screen.findByText("Usage and estimated cost");
   expect(historyCalls).toBe(0);
   expect(screen.queryByRole("textbox")).not.toBeInTheDocument();
 });

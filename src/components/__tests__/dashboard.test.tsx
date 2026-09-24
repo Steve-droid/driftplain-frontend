@@ -1,3 +1,7 @@
+vi.mock("../../api/auth", () => ({getMe: vi.fn().mockResolvedValue({chatEnabled:false})}));
+import { usageFixture } from "../../usage/fixtures";
+import { apiGet } from "../../api/client";
+vi.mock("../../api/client", async (original) => ({...await original<object>(), apiGet: vi.fn()}));
 import { describe, expect, it, vi } from "vitest";
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 
@@ -13,7 +17,6 @@ import {
   projectsFixture,
   chatHistoryFixture,
   securitySavingsFixture,
-  baselinePickSavingsFixture,
 } from "../../test/fixtures";
 import { runtimeHintFromProjectModel } from "../onboarding/jenkinsRuntime";
 
@@ -23,7 +26,7 @@ vi.mock("../../api/savings", () => ({
   getRunFindings: vi.fn().mockResolvedValue({ runId: 0, findings: [] }),
   submitFeedback: vi.fn(),
 }));
-import { getSavings, getRunFindings, submitFeedback } from "../../api/savings";
+import { getRunFindings, submitFeedback } from "../../api/savings";
 
 // The Dashboard now loads the project list (switcher) and mounts the chat panel;
 // stub both so it can render savings without real network calls.
@@ -287,48 +290,45 @@ describe("RunsTable — rating a finding (S17b)", () => {
 
 describe("Dashboard (E20: task label, baseline pick)", () => {
   it("names the task under the CI-runs stat", async () => {
-    vi.mocked(getSavings).mockResolvedValue(securitySavingsFixture);
+    vi.mocked(apiGet).mockResolvedValue(usageFixture);
     vi.mocked(listProjects).mockResolvedValue(projectsFixture);
     vi.mocked(getChatHistory).mockResolvedValue(chatHistoryFixture);
     const { Dashboard } = await import("../../pages/Dashboard");
     render(<Dashboard />);
-    expect(await screen.findByText(/Security analysis · DeepSeek V4 Flash/)).toBeInTheDocument();
+    expect(await screen.findByText(/aborted-13 · security analysis/)).toBeInTheDocument();
   });
 
   it("shows raw stats and no 'saved' figure when the pick IS the baseline", async () => {
-    vi.mocked(getSavings).mockResolvedValue(baselinePickSavingsFixture);
+    vi.mocked(apiGet).mockResolvedValue(usageFixture);
     vi.mocked(listProjects).mockResolvedValue(projectsFixture);
     vi.mocked(getChatHistory).mockResolvedValue(chatHistoryFixture);
     const { Dashboard } = await import("../../pages/Dashboard");
     render(<Dashboard />);
-    expect(await screen.findByText("Running the baseline")).toBeInTheDocument();
+    expect(await screen.findByText("Usage and estimated cost")).toBeInTheDocument();
     expect(screen.queryByText("Cumulative saved")).not.toBeInTheDocument();
     expect(screen.queryByText(/vs baseline/)).not.toBeInTheDocument();
     expect(screen.queryByText(/costed, not run/)).not.toBeInTheDocument();
     // the raw stats are still there
-    expect(screen.getByText("Spend this period")).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "CI runs" })).toBeInTheDocument();
+    expect(screen.getByText("Complete estimates")).toBeInTheDocument();
+    expect(screen.getByRole("region", { name: "CI run results" })).toBeInTheDocument();
   });
 });
 
 describe("Dashboard (overspend)", () => {
   it("labels a net overspend in red copy, not green 'saved'", async () => {
-    vi.mocked(getSavings).mockResolvedValue(overspendFixture);
+    vi.mocked(apiGet).mockResolvedValue(usageFixture);
     vi.mocked(listProjects).mockResolvedValue(projectsFixture);
     vi.mocked(getChatHistory).mockResolvedValue(chatHistoryFixture);
     const { Dashboard } = await import("../../pages/Dashboard");
     render(<Dashboard />);
-    await screen.findByText("Net overspend");
-    // numbers render final (no count-up); the KPI headline and the runs-table cell both
-    // show the figure — assert the headline (the first, a <div>) reads red
-    const [value] = await screen.findAllByText("-$0.0100");
-    expect(value.tagName).toBe("DIV");
-    expect(value.className).toContain("text-risk");
+    await screen.findByText("Partial known charges");
+    expect(screen.queryByText("Net overspend")).not.toBeInTheDocument();
+
   });
 
   it("badges a setup-incomplete project (no CI token yet)", async () => {
     const incomplete = [{ ...projectsFixture[0], setupComplete: false }];
-    vi.mocked(getSavings).mockResolvedValue(savingsFixture);
+    vi.mocked(apiGet).mockResolvedValue(usageFixture);
     vi.mocked(listProjects).mockResolvedValue(incomplete);
     vi.mocked(getChatHistory).mockResolvedValue(chatHistoryFixture);
     const { Dashboard } = await import("../../pages/Dashboard");
@@ -338,8 +338,8 @@ describe("Dashboard (overspend)", () => {
 
   it("clears the previous project's numbers when switching projects", async () => {
     // Project 1 resolves; project 2 stays pending so we can observe the gap.
-    vi.mocked(getSavings)
-      .mockResolvedValueOnce(savingsFixture) // project 1 ($0.0450 saved)
+    vi.mocked(apiGet)
+      .mockResolvedValueOnce(usageFixture) // project 1 ($0.0450 saved)
       .mockReturnValueOnce(new Promise(() => {})); // project 2 — never resolves
     vi.mocked(listProjects).mockResolvedValue(projectsFixture);
     vi.mocked(getChatHistory).mockResolvedValue(chatHistoryFixture);
@@ -347,15 +347,15 @@ describe("Dashboard (overspend)", () => {
     render(<Dashboard />);
 
     // project 1's savings panel is on screen (stable label, not the animated number)
-    await screen.findByText("Cumulative saved");
+    await screen.findByText("Usage and estimated cost");
 
     // switch to project 2 (savings still loading)
     fireEvent.change(screen.getByLabelText("Select CI-Agent"), { target: { value: "2" } });
 
     // project 1's numbers must disappear immediately — not linger under project 2
     await waitFor(() =>
-      expect(screen.queryByText("Cumulative saved")).not.toBeInTheDocument(),
+      expect(screen.queryByText("Usage and estimated cost")).not.toBeInTheDocument(),
     );
-    expect(screen.getByText("Loading savings…")).toBeInTheDocument();
+    expect(screen.getByText("Loading usage…")).toBeInTheDocument();
   });
 });

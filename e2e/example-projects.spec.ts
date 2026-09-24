@@ -1,6 +1,7 @@
+import {usageFixture} from "../src/usage/fixtures";
 import { test, expect } from "@playwright/test";
 import { mockBackend } from "./mock-backend";
-import { projectsFixture, savingsFixture, securitySavingsFixture } from "../src/test/fixtures";
+import { projectsFixture } from "../src/test/fixtures";
 
 for (const width of [1440, 390]) {
   test(`sample projects are clear and browsable at ${width}px`, async ({ page }) => {
@@ -13,14 +14,14 @@ for (const width of [1440, 390]) {
     ];
     await page.route("**/auth/me", route => route.fulfill({ json: { id: 7, email: "visitor@example.com", chatEnabled: false } }));
     await page.route("**/projects", route => route.fulfill({ json: projects }));
-    await page.route("**/projects/*/savings*", route => route.fulfill({
-      json: route.request().url().includes("/92/") ? securitySavingsFixture : savingsFixture,
+    await page.route("**/projects/*/usage/v1?*", route => route.fulfill({
+      json: usageFixture,
     }));
     await page.addInitScript(() => localStorage.setItem("mm_token", "fixture-token"));
     await page.goto("/");
     await page.getByRole("button", { name: "View my CI agents", exact: true }).click();
     await expect(page.getByRole("heading", { name: projects[0].name })).toBeVisible();
-    await expect(page.getByText("Cumulative saved", { exact: true })).toBeVisible();
+    await expect(page.getByText("Usage and estimated cost", { exact: true })).toBeVisible();
     await expect(page.getByText("Setup incomplete", { exact: true })).toHaveCount(0);
     await expect(page.getByText("Ask Driftplain", { exact: true })).toHaveCount(0);
     await page.getByRole("button", { name: "CI-Agent actions" }).click();

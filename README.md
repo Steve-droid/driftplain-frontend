@@ -128,3 +128,11 @@ Run `npm test`, `npm run test:integration`, `npm run typecheck`, `npm run lint`,
 then `npx playwright test --config playwright.config.catalog.ts` (desktop + mobile mocks) and
 `npx playwright test --config playwright.config.public-access.ts` (existing public/auth flows).
 All are local/fake. Publication does not deploy the explorer or import production data.
+
+### Usage and task results (B15)
+
+The dashboard shows selected-model estimates with separate complete, partial, unavailable
+and legacy coverage, plus accepted/rejected and rated/total feedback. Run cards retain the
+executed revision and distinguish reports, proposed patches, generated-test evidence and
+diagnosis from findings. Historical input/output amounts remain explicitly limited and
+outside new totals. See [the dashboard contract](src/usage/CONTRACT.md).

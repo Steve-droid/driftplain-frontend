@@ -1,6 +1,7 @@
+import {usageFixture} from "../src/usage/fixtures";
 import { test, expect, type Page } from "@playwright/test";
 import { mockBackend } from "./mock-backend";
-import { projectsFixture, securitySavingsFixture } from "../src/test/fixtures";
+import { projectsFixture } from "../src/test/fixtures";
 
 // The S17 happy path: drive the REAL frontend end-to-end against a fully mocked backend
 // (route interception). B13 routes the CTA to named setup; this compatibility test
@@ -77,12 +78,10 @@ test("login → home → create a CI-Agent → dashboard → grounded chat", asy
 
   // --- dashboard: the mocked CI run seeds the KPIs / chart / runs table ---
   // (exact: the chat opener's expanded grounding snippet also contains "cumulative saved")
-  await expect(page.getByText("Cumulative saved", { exact: true })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "CI runs" })).toBeVisible(); // runs table
-  // the seeded run's table row: build 101, the agent's gate recorded as Pass (E20 column)
-  const row101 = page.getByRole("row", { name: /101/ });
-  await expect(row101).toBeVisible();
-  await expect(row101.getByText("Pass")).toBeVisible();
+  await expect(page.getByText("Usage and estimated cost", { exact: true })).toBeVisible();
+  await expect(page.getByRole("region", {name:"CI run results"})).toBeVisible();
+  await expect(page.getByText("report-12 · other")).toBeVisible();
+  await expect(page.getByText(/CI gate: pass/)).toBeVisible();
 
   // --- grounded chat: the server-seeded "explain my spend" opener renders ---
   const chat = page.getByRole("region", { name: "Grounded chat" });
@@ -141,7 +140,7 @@ test("home navigation: View my CI-Agents → dashboard, logo → home, browser B
 
   // hub → dashboard via "View my CI-Agents"
   await page.getByRole("button", { name: /View my CI agents/ }).first().click();
-  await expect(page.getByText("Cumulative saved", { exact: true })).toBeVisible();
+  await expect(page.getByText("Usage and estimated cost", { exact: true })).toBeVisible();
 
   // dashboard logo (aria "Home") → back to the hub
   await page.getByRole("button", { name: "Back to home", exact: true }).click();
@@ -149,7 +148,7 @@ test("home navigation: View my CI-Agents → dashboard, logo → home, browser B
 
   // browser Back from the hub-after-dashboard returns to the dashboard (history nav)
   await page.goBack();
-  await expect(page.getByText("Cumulative saved", { exact: true })).toBeVisible();
+  await expect(page.getByText("Usage and estimated cost", { exact: true })).toBeVisible();
 
   expect(mock.errors, mock.errors.join("\n")).toHaveLength(0);
 });
@@ -163,15 +162,13 @@ for (const width of [1440, 390]) {
       route.fulfill({ json: [projectsFixture[0]] }),
     );
     const runs = [69376, 0, null].map((cacheReadTokens, i) => ({
-      ...securitySavingsFixture.runs[0],
+      ...usageFixture.runs[1],
       id: 114 + i,
       jenkinsBuildId: `cache-${i}`,
-      cacheReadTokens,
-      findingsCount: 0,
-      cwes: [],
+      usage: {inputTokens:11501,outputTokens:2618,cacheReadTokens},
     }));
-    await page.route(/\/projects\/1\/savings(?:\?.*)?$/, (route) =>
-      route.fulfill({ json: { ...securitySavingsFixture, runs } }),
+    await page.route(/\/projects\/1\/usage\/v1(?:\?.*)?$/, (route) =>
+      route.fulfill({ json: { ...usageFixture, runs } }),
     );
     await page.route(/\/projects\/1\/runs\/\d+\/findings$/, (route) =>
       route.fulfill({ json: { runId: Number(route.request().url().split("/").at(-2)), findings: [] } }),
@@ -179,31 +176,16 @@ for (const width of [1440, 390]) {
     await page.goto("/");
     await signIn(page);
     await page.getByRole("button", { name: /View my CI agents/ }).first().click();
-    for (const [index, expected] of ["69,376", "0", "Not reported"].entries()) {
-      const row = page.getByRole("row", { name: new RegExp(`cache-${index}`) });
-      const before = await row.innerText();
-      await row.getByText(`cache-${index}`, { exact: true }).click();
-      await expect(page.getByText("No findings on this run.")).toBeVisible();
-      const detail = page.getByRole("row").filter({ has: page.getByText("Cache-read tokens", { exact: true }) });
-      await expect(detail.locator("dl > div").filter({ hasText: "Cache-read tokens" })).toHaveText(`Cache-read tokens${expected}`);
-      await expect(detail.locator("dl > div").filter({ hasText: "Input tokens" })).toHaveText("Input tokens11,501");
-      await expect(detail.locator("dl > div").filter({ hasText: "Output tokens" })).toHaveText("Output tokens2,618");
-      const note = detail.getByText("Cache-read costs are not included in the displayed cost estimates.");
-      await expect(note).toBeVisible();
-      // The disclaimer must fit inside the visible scroll container, even on a phone.
-      const bounds = await note.evaluate((el) => {
-        const text = el.getBoundingClientRect();
-        const container = el.closest("table")!.parentElement!.getBoundingClientRect();
-        return { right: text.right, containerRight: container.right };
-      });
-      expect(bounds.right).toBeLessThanOrEqual(bounds.containerRight);
-      expect(await row.innerText()).toBe(before);
-      if (index === 0) {
-        await detail.scrollIntoViewIfNeeded();
-        await page.screenshot({ path: testInfo.outputPath("cache-usage.png"), fullPage: true });
-      }
-      await row.getByText(`cache-${index}`, { exact: true }).click();
-      await expect(page.getByText("Cache-read tokens", { exact: true })).toBeHidden();
+    for (const [index, expected] of ["69376", "0", "Not reported"].entries()) {
+      const card = page.getByRole("article").filter({has:page.getByRole("heading",{name:new RegExp(`cache-${index}`)})});
+      await card.getByText("Usage, rates and attribution",{exact:true}).click();
+      await expect(card.locator("dl > div").filter({hasText:"cacheReadTokens"})).toHaveText(`cacheReadTokens${expected}`);
+      await expect(card.locator("dl > div").filter({hasText:"inputTokens"})).toHaveText("inputTokens11501");
+      await expect(card.locator("dl > div").filter({hasText:"outputTokens"})).toHaveText("outputTokens2618");
+      expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+      if(index===0) await page.screenshot({path:testInfo.outputPath("cache-usage.png"),fullPage:true});
+      await card.getByText("Usage, rates and attribution",{exact:true}).click();
+      await expect(card.getByText("cacheReadTokens",{exact:true})).toBeHidden();
     }
     expect(mock.errors, mock.errors.join("\n")).toHaveLength(0);
   });

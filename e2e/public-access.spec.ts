@@ -13,7 +13,7 @@ for (const width of [1440, 390]) {
     await page.addInitScript(() => localStorage.setItem("mm_token", "fixture-token"));
     await page.goto("/");
     await page.getByRole("button", { name: /View my CI.agents/i }).click();
-    await expect(page.getByText("Cumulative saved")).toBeVisible();
+    await expect(page.getByText("Usage and estimated cost")).toBeVisible();
     await expect(page.locator("textarea")).toHaveCount(0);
     expect(chatRequests).toBe(0);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);

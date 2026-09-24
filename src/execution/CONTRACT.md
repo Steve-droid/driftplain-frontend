@@ -68,3 +68,6 @@ navigation. Dirty custom drafts omit the duplicate original configuration becaus
 fields represent all supported settings. Provider keys and CI tokens remain absent.
 Backend Other setup supplies a dedicated failure-preserving Custom task Jenkins stage.
 Tests use synthetic verified fixtures; the six actual Other integrations remain pending.
+
+B15 replaces the authenticated dashboard with [selected-run usage/results](../usage/CONTRACT.md).
+Setup routes and literal custom-task authoring retain their existing contracts.
