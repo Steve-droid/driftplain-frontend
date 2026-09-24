@@ -562,7 +562,11 @@ export function CatalogApp({ location }: { location: string }) {
               />
             ))}
           </div>
-          {choices.length >= 2 ? (
+          {choices.length >= 2 && path === "/compare" ? (
+            <button className="primary-action" disabled>
+              Viewing comparison
+            </button>
+          ) : choices.length >= 2 ? (
             <Link className="primary-action" href={compareUrl}>
               Compare choices →
             </Link>

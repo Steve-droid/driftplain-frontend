@@ -12,7 +12,7 @@ import type { Benchmark, Metric, ModelDetail, Observation } from "./types";
 import { comparisonKey, collectionName, formatMetric } from "./evidence";
 import { BenchmarkName } from "./BenchmarkName";
 import { EvidenceDetails } from "./EvidenceView";
-import { updateParams } from "./navigation";
+import { Link, updateParams } from "./navigation";
 interface Column {
   choice: string;
   name: string;
@@ -187,6 +187,15 @@ export function Compare({
           rows are the same model.
         </p>
       )}
+      {view === "history" &&
+        columns?.some((column) =>
+          column.rows.some((row) => row.origin === "legacy_backfill"),
+        ) && (
+          <p className="catalog-notice">
+            Historical legacy rows have incomplete provenance. They remain
+            separate and do not establish a direct model-to-model comparison.
+          </p>
+        )}
       {choices.length < 2 ? (
         <p role="status">
           Add at least two choices from Models or benchmark evidence.
@@ -202,12 +211,26 @@ export function Compare({
         <p role="status">Loading comparison…</p>
       ) : (
         <>
-          {!groups.size && (
-            <p>
-              No evidence in this view. Try all history or a different
-              benchmark.
-            </p>
-          )}
+          {!groups.size &&
+            (view === "active" ? (
+              <div className="catalog-notice" role="status">
+                <p>No active evidence for these choices.</p>
+                <button
+                  className="secondary-action"
+                  onClick={() => updateParams({ view: "history", chart: null })}
+                >
+                  Show historical evidence
+                </button>
+                <Link className="secondary-action" href="/evidence">
+                  Find source rows to compare
+                </Link>
+              </div>
+            ) : (
+              <p>
+                No evidence for these choices in this view. Try another
+                benchmark or exact source rows.
+              </p>
+            ))}
           {chart && (
             <section
               className="card comparison-chart"
