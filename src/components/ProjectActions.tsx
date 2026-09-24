@@ -9,13 +9,10 @@ import {
   Trash2,
 } from "lucide-react";
 import type { Project } from "../types/project";
-import type { RecommendationResult } from "../types/recommend";
-import { deleteProject, updateProject } from "../api/projects";
+import { deleteProject } from "../api/projects";
 import { connectJenkins, getJenkins } from "../api/jenkins";
 import { ApiError } from "../api/client";
 import { Modal } from "./Modal";
-import { RecommenderForm } from "./onboarding/RecommenderForm";
-import { RecommendationView } from "./onboarding/RecommendationView";
 import { JenkinsConnectForm } from "./onboarding/JenkinsConnectForm";
 import { CiSetupView } from "./onboarding/CiSetupView";
 import { runtimeHintFromProjectModel } from "./onboarding/jenkinsRuntime";
@@ -23,7 +20,7 @@ import { runtimeHintFromProjectModel } from "./onboarding/jenkinsRuntime";
 type View = "menu" | "editJenkins" | "cisetup" | "repick" | "delete";
 
 // Per-project actions on the dashboard (S15d): edit the Jenkins connection, re-pick the
-// model (full recommender re-run → PATCH), or delete the project (confirm → cascade).
+// model via explicit setup, or delete the project (confirm → cascade).
 // onChanged refreshes the dashboard after an edit; onDeleted hands control back so the
 // parent can re-select/empty-state.
 export function ProjectActions({
@@ -55,7 +52,7 @@ export function ProjectActions({
 
   function open(v: View) {
     setMenuOpen(false);
-    if (project.executionRevisionId && (v === "cisetup" || v === "repick" || v === "editJenkins")) { navigate(`/setup?project=${project.id}`); return; }
+    if (v === "repick" || (project.executionRevisionId && (v === "cisetup" || v === "editJenkins"))) { navigate(`/setup?project=${project.id}`); return; }
     setView(v);
   }
   function close() {
@@ -114,19 +111,6 @@ export function ProjectActions({
             onUnauthorized={onUnauthorized}
             onDone={() => {
               onChanged(); // a first mint here flips setupComplete
-              close();
-            }}
-          />
-        </Modal>
-      )}
-
-      {view === "repick" && (
-        <Modal title={`Re-pick model: ${project.name}`} onClose={close}>
-          <Repick
-            project={project}
-            onUnauthorized={onUnauthorized}
-            onSaved={() => {
-              onChanged();
               close();
             }}
           />
@@ -252,47 +236,6 @@ function EditJenkins({
   );
 }
 
-// Re-pick flow: a fresh recommender run (new shortlist) → choose → PATCH the project's
-// selected option + baseline. Mirrors onboarding's recommend step.
-function Repick({
-  project,
-  onSaved,
-  onUnauthorized,
-}: {
-  project: Project;
-  onSaved: () => void;
-  onUnauthorized?: () => void;
-}) {
-  const [result, setResult] = useState<RecommendationResult | null>(null);
-
-  if (result === null) {
-    return <RecommenderForm onResult={setResult} onUnauthorized={onUnauthorized} />;
-  }
-
-  return (
-    <div className="flex flex-col gap-3">
-      <button
-        onClick={() => setResult(null)}
-        className="self-start text-xs font-medium text-muted transition-colors hover:text-fg"
-      >
-        ← Refine inputs
-      </button>
-      <RecommendationView
-        result={result}
-        onUnauthorized={onUnauthorized}
-        submitLabel="Save changes"
-        initialName={project.name}
-        onSubmit={async (pick) => {
-          await updateProject(project.id, pick);
-          onSaved();
-        }}
-      />
-    </div>
-  );
-}
-
-// Delete confirmation: spells out that all of the project's data goes with it (the DB
-// cascade), then deletes on confirm.
 function DeleteConfirm({
   project,
   onCancel,

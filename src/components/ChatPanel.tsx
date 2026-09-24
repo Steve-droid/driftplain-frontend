@@ -151,7 +151,7 @@ export function ChatPanel({
             Ask {BRAND_NAME}
           </div>
           <div className="mt-1 text-xs leading-relaxed text-muted">
-            Answers grounded in your savings and model catalog
+            Legacy conversation · historical cost calculations and catalog
           </div>
         </div>
       </div>

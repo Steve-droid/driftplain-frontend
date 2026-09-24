@@ -4,17 +4,17 @@ import { HOW_IT_WORKS_STEPS } from "../../lib/valueProp";
 /** A conceptual example, deliberately separate from real account metrics. */
 export function ReviewIllustration() {
   return (
-    <figure className="review-illustration" aria-label="Illustration: find a model, review a pull request, and track quality-qualified savings">
+    <figure className="review-illustration" aria-label="Illustration: find a model, review a pull request, and track reported usage and results">
       <figcaption className="mb-6 flex items-center justify-between gap-2 text-[10px] font-medium uppercase tracking-[0.18em] text-muted">
         <span>A pull request, reimagined</span><span className="rounded-full border border-border px-2.5 py-1 tracking-[0.1em]">Illustrative flow</span>
       </figcaption>
       <div className="illustration-stage illustration-model">
         <div className="flex items-center gap-3">
           <span className="illustration-icon text-accent"><Sparkles size={19} /></span>
-          <div><p className="text-xs text-muted">01 / {HOW_IT_WORKS_STEPS[0]}</p><p className="mt-1 text-sm font-medium">A fit for your review needs</p></div>
+          <div><p className="text-xs text-muted">01 / {HOW_IT_WORKS_STEPS[0]}</p><p className="mt-1 text-sm font-medium">Compare source-backed results</p></div>
         </div>
         <div className="mt-5 flex gap-2" aria-hidden>
-          <span className="model-chip">Quality</span><span className="model-chip">Cost</span><span className="model-chip">Speed</span>
+          <span className="model-chip">Benchmark</span><span className="model-chip">Version</span><span className="model-chip">Source</span>
           <span className="ml-auto flex items-center gap-1.5 text-xs text-signal"><Check size={14} /> Selected</span>
         </div>
       </div>
@@ -33,13 +33,13 @@ export function ReviewIllustration() {
       <div className="illustration-stage illustration-savings">
         <div className="flex items-center gap-3">
           <span className="illustration-icon text-banked"><ShieldCheck size={19} /></span>
-          <div><p className="text-xs text-muted">03 / {HOW_IT_WORKS_STEPS[2]}</p><p className="mt-1 text-sm font-medium">Lower cost. Quality comes first.</p></div>
+          <div><p className="text-xs text-muted">03 / {HOW_IT_WORKS_STEPS[2]}</p><p className="mt-1 text-sm font-medium">Usage, estimated cost and findings.</p></div>
         </div>
         <div className="mt-5 grid grid-cols-[65px_1fr] items-center gap-x-3 gap-y-2.5 text-[11px] text-muted" aria-hidden>
-          <span>Baseline</span><span className="h-1.5 rounded-full bg-gray-600" />
-          <span>Your model</span><span className="savings-bar h-1.5 w-1/3 rounded-full bg-signal" />
+          <span>Input</span><span className="h-1.5 rounded-full bg-gray-600" />
+          <span>Output</span><span className="savings-bar h-1.5 w-1/3 rounded-full bg-signal" />
         </div>
-        <p className="mt-4 text-[11px] leading-relaxed text-muted">Savings count only when the quality signal holds.</p>
+        <p className="mt-4 text-[11px] leading-relaxed text-muted">Estimates show their limits. Feedback is not a quality guarantee.</p>
       </div>
     </figure>
   );

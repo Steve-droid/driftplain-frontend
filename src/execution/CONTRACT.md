@@ -2,7 +2,8 @@
 
 `/setup` creates an explicit named-task project. `/setup?project=<id>` edits or re-picks
 an existing project, including an explicit transition of a legacy project. The old history,
-legacy edit menus and `/legacy-setup` compatibility route remain available. New projects
+Jenkins/token controls remain available. B17 replaces `/legacy-setup` with a retirement
+notice and directs every model re-pick to explicit setup. New projects
 have no weighted ranking, budget/speed slider or comparison baseline. Other authoring is B14.
 
 `api.ts` calls authenticated `/execution/v1`; public source evidence remains in `/catalog/v1`.

@@ -16,65 +16,7 @@ const API_ORIGIN = /^https?:\/\/localhost:8000\//;
 
 // ci_review + budgetSensitivity:"high" → Nova suggested, Haiku runner-up, Sonnet
 // baseline (the deterministic recommender's documented headline case).
-const RECOMMENDATION = {
-  profileId: 1,
-  comparabilityGroup: { benchmark: "CodeReviewBench", metric: "review_score_percent" },
-  suggested: {
-    recommendationOptionId: 11,
-    rank: 1,
-    model: "Nova 2 Lite",
-    modelId: 4,
-    vendor: "Amazon",
-    benchmark: "CodeReviewBench",
-    metric: "review_score_percent",
-    score: "0.680000",
-    costPerMtok: "0.850000",
-    qualityNorm: "0.780000",
-    costNorm: "1.000000",
-    rankScore: "0.868000",
-    benchmarkResultId: 7,
-  },
-  baseline: {
-    model: "Claude Sonnet 4.5",
-    modelId: 9,
-    vendor: "Anthropic",
-    costPerMtok: "6.000000",
-    benchmarkResultId: 5,
-    selection: "configured",
-  },
-  shortlist: [
-    {
-      recommendationOptionId: 11,
-      rank: 1,
-      model: "Nova 2 Lite",
-      modelId: 4,
-      vendor: "Amazon",
-      benchmark: "CodeReviewBench",
-      metric: "review_score_percent",
-      score: "0.680000",
-      costPerMtok: "0.850000",
-      qualityNorm: "0.780000",
-      costNorm: "1.000000",
-      rankScore: "0.868000",
-      benchmarkResultId: 7,
-    },
-    {
-      recommendationOptionId: 12,
-      rank: 2,
-      model: "Claude Haiku 4.5",
-      modelId: 3,
-      vendor: "Anthropic",
-      benchmark: "CodeReviewBench",
-      metric: "review_score_percent",
-      score: "0.850000",
-      costPerMtok: "2.000000",
-      qualityNorm: "0.970000",
-      costNorm: "0.425000",
-      rankScore: "0.788000",
-      benchmarkResultId: 8,
-    },
-  ],
-};
+
 
 const SAVINGS = {
   range: "all",
@@ -199,7 +141,7 @@ export interface MockHandle {
 // Install the mock on a page. The closure holds the create state so the dashboard's
 // project list reflects the just-created agent, plus the fail-closed error log.
 export async function mockBackend(page: Page): Promise<MockHandle> {
-  let created = false; // flips on POST /projects so GET /projects then lists it
+  const created = false; // flips on POST /projects so GET /projects then lists it
   const errors: string[] = [];
   const bad = (msg: string) => errors.push(msg);
 
@@ -237,33 +179,18 @@ export async function mockBackend(page: Page): Promise<MockHandle> {
       return json(route, { accessToken: "e2e-jwt-token", tokenType: "bearer" });
     }
 
-    // --- recommender (deterministic, no LLM) ---
-    if (path === "/recommendations" && method === "POST") {
-      const b = body();
-      if (!Array.isArray(b?.taskTypes) || !b.taskTypes.includes("ci_review"))
-        bad(`POST /recommendations taskTypes=${JSON.stringify(b?.taskTypes)} (want ["ci_review"])`);
-      if (!b?.budgetSensitivity) bad("POST /recommendations missing budgetSensitivity");
-      return json(route, RECOMMENDATION, 201);
+    // B17: retired public actions must never succeed, even in browser fixtures.
+    if (path.startsWith("/recommendations") && method === "POST") {
+      bad("Attempted retired recommendation action");
+      return json(route, { detail: "Use /execution/v1" }, 410);
     }
 
     // --- projects: list (GET) vs create (POST) share the path ---
     if (path === "/projects" && method === "GET")
       return json(route, created ? [project()] : []);
     if (path === "/projects" && method === "POST") {
-      const b = body();
-      if (!b?.name) bad("POST /projects missing name");
-      if (typeof b?.selectedOptionId !== "number")
-        bad(`POST /projects selectedOptionId=${b?.selectedOptionId} (want number)`);
-      if (typeof b?.baselineModelId !== "number")
-        bad(`POST /projects baselineModelId=${b?.baselineModelId} (want number)`);
-      // E20: the task the pick was ranked on + the review preferences typed at the
-      // preferences step travel with the create.
-      if (b?.taskType !== "ci_review")
-        bad(`POST /projects taskType=${JSON.stringify(b?.taskType)} (want "ci_review")`);
-      if (b?.reviewPreferences !== "Flag any use of eval().")
-        bad(`POST /projects reviewPreferences=${JSON.stringify(b?.reviewPreferences)}`);
-      created = true;
-      return json(route, project({ setupComplete: false }), 201);
+      bad("Attempted retired legacy project creation");
+      return json(route, { detail: "Use /execution/v1/projects" }, 410);
     }
 
     // --- Jenkins connect (defer-create's second half) ---

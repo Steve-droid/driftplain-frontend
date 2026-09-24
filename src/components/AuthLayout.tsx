@@ -18,11 +18,11 @@ export function AuthLayout({ children }: { children: ReactNode }) {
         <ModelNamesBackdrop position="above" />
         <div className="auth-message relative z-10">
           <p className="text-balance text-4xl font-semibold leading-[1.12] tracking-[-0.045em] text-gray-50 lg:text-6xl">
-            Great reviews.<br />{" "}
-            <span className="text-signal">Less spend.</span>
+            Explore evidence.<br />{" "}
+            <span className="text-signal">Choose your model.</span>
           </p>
           <p className="mt-6 max-w-sm text-base leading-relaxed text-muted">
-            Find a model for your CI, put it to work, and see the savings backed by quality.
+            Explore benchmark evidence, choose a model for CI, and track usage and results.
           </p>
           <div className="mt-10 flex items-center gap-3 text-xs text-muted">
             <span className="h-px w-8 bg-signal/60" />

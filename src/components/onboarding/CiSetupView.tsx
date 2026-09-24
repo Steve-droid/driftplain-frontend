@@ -20,7 +20,7 @@ function copyForTask(setup: CiSetup | null): { title: string; blurb: string; not
   return {
     title: "Add the review stage to your pipeline",
     blurb:
-      "Reviews each pull request's diff for security and style issues and posts each run's savings.",
+      "Reviews each pull request's diff for security and style issues and reports findings and token usage.",
     note:
       "The agent fetches this project's model and review preferences from Driftplain on every run, so changing them here applies on the next build without editing the pipeline.",
   };
