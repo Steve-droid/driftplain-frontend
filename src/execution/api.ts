@@ -3,7 +3,8 @@ export type Task =
   | "ci_review"
   | "security_analysis"
   | "test_generation"
-  | "ci_failure_diagnosis";
+  | "ci_failure_diagnosis"
+  | "other";
 export interface Profile {
   task: Task;
   mode: "single_call" | "opencode";
@@ -52,6 +53,8 @@ export interface Selection extends Profile {
   group: string | null;
 }
 export interface TaskConfiguration {
+  label?: string | null;
+  systemPrompt?: string | null;
   instructions?: string | null;
   inputs?: {
     diff: boolean;

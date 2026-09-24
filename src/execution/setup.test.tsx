@@ -243,3 +243,58 @@ it("revalidates a restored choice and blocks disabled choices without replacing 
   ).toBeDisabled();
   expect(createExecutionProject).not.toHaveBeenCalled();
 });
+
+it("offers literal custom templates, keeps author text on mode change and requires a fresh pick", async () => {
+  render(<ExecutionSetup />);
+  fireEvent.change(screen.getByLabelText("Task"), {
+    target: { value: "other" },
+  });
+  fireEvent.change(screen.getByLabelText("Editable starter template"), {
+    target: { value: "release" },
+  });
+  fireEvent.click(
+    screen.getByRole("button", { name: "Replace prompt text with template" }),
+  );
+  fireEvent.change(screen.getByLabelText("Task instructions"), {
+    target: { value: " ${BUILD_TAG}\n$(whoami) " },
+  });
+  expect(screen.getByLabelText("Task instructions preview").textContent).toBe(
+    " ${BUILD_TAG}\n$(whoami) ",
+  );
+  expect(
+    screen.queryByLabelText("Recommendation group"),
+  ).not.toBeInTheDocument();
+  fireEvent.click(
+    await screen.findByRole("button", { name: /Choose Exact Alpha/ }),
+  );
+  fireEvent.change(screen.getByLabelText("Project name"), {
+    target: { value: "Custom" },
+  });
+  await waitFor(() =>
+    expect(
+      screen.getByRole("button", { name: "Continue to Jenkins" }),
+    ).toBeEnabled(),
+  );
+  fireEvent.change(screen.getByLabelText("Execution mode"), {
+    target: { value: "opencode" },
+  });
+  expect(
+    screen.getByRole("button", { name: "Continue to Jenkins" }),
+  ).toBeDisabled();
+  expect(screen.getByText(/Previous pick: Exact Alpha/)).toBeInTheDocument();
+  expect(screen.getByLabelText("Task instructions")).toHaveValue(
+    " ${BUILD_TAG}\n$(whoami) ",
+  );
+  expect(
+    screen.getByText(/No validation configured: changes are unverified/),
+  ).toBeInTheDocument();
+  await waitFor(() =>
+    expect(candidates).toHaveBeenLastCalledWith(
+      expect.objectContaining({ task: "other", mode: "opencode" }),
+      "",
+      null,
+      0,
+      { model: null, evidence: null },
+    ),
+  );
+});

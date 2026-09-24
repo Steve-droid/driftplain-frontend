@@ -20,6 +20,7 @@ import {
   clearDraft,
   configFor,
   defaultFields,
+  draftTooLarge,
   fieldsFrom,
   loadDraft,
   profileFor,
@@ -30,6 +31,7 @@ import {
   type Draft,
 } from "./draft";
 import { CandidateEvidence, EligibleModelPicker } from "./EligibleModelPicker";
+import { OtherFields } from "./OtherFields";
 import { TaskFields } from "./TaskFields";
 import { ExecutionCommand } from "./ExecutionCommand";
 import "./execution.css";
@@ -70,7 +72,7 @@ export function ExecutionSetup({
   const [checking, setChecking] = useState(false);
   const [pickVersion, setPickVersion] = useState(0);
   const profile = draft.task
-    ? profileFor(draft.task, draft.language, draft.fix)
+    ? profileFor(draft.task, draft.language, draft.fix, draft.mode)
     : null;
   const selectionKey = JSON.stringify(draft.selection);
   const originKey = JSON.stringify([intent.model, intent.evidence]);
@@ -92,6 +94,7 @@ export function ExecutionSetup({
           const c = p.configuration;
           setDraft({
             task: c.taskType,
+            mode: c.executionMode,
             language: c.policy.language ?? "python",
             fix: c.policy.proposeFix,
             name: p.name,
@@ -101,6 +104,7 @@ export function ExecutionSetup({
                 c.taskType,
                 c.policy.language ?? "python",
                 c.policy.proposeFix,
+                c.executionMode,
               ),
               runtimeId: c.runtimeId,
               observationId: p.observationId,
@@ -225,21 +229,31 @@ export function ExecutionSetup({
     task: Task | null,
     language = draft.language,
     fix = draft.fix,
+    mode = draft.mode ?? "single_call",
   ) {
     setDraft((d) => ({
       ...d,
       task,
       language,
       fix,
+      mode,
       selection: null,
       configuration: undefined,
       dirtyConfig: true,
       fields: {
         ...defaultFields(),
+        ...(task === "other" && d.task === "other" ? d.fields : {}),
         instructions: d.fields.instructions,
         lockPath:
           language === "node" ? "package-lock.json" : "requirements.lock",
-        writePaths: task === "ci_failure_diagnosis" ? "" : "tests",
+        writePaths:
+          task === "other"
+            ? d.task === "other"
+              ? d.fields.writePaths
+              : ""
+            : task === "ci_failure_diagnosis"
+              ? ""
+              : "tests",
       },
     }));
     setVerified(null);
@@ -259,6 +273,15 @@ export function ExecutionSetup({
   const valid =
     !!profile &&
     !!draft.selection &&
+    JSON.stringify(profile) ===
+      JSON.stringify(
+        profileFor(
+          draft.selection.task,
+          draft.selection.language ?? "python",
+          draft.selection.proposeFix,
+          draft.selection.mode,
+        ),
+      ) &&
     verified?.key === selectionKey &&
     (!intent.model ||
       (verified.item.catalogModelId === intent.model &&
@@ -347,6 +370,13 @@ export function ExecutionSetup({
           )}
         </div>
         {error && <p role="alert">{error}</p>}
+        {draftTooLarge(draft) && (
+          <p role="alert">
+            This draft exceeds the 64,000-byte navigation limit. Shorten its
+            inputs or prompts before leaving this page; it cannot be restored
+            after navigation or reload.
+          </p>
+        )}
         <fieldset disabled={checking}>
           {!loaded ? (
             <p role="status">Loading project…</p>
@@ -391,11 +421,32 @@ export function ExecutionSetup({
                         {label}
                       </option>
                     ))}
-                    <option disabled>
-                      Other — custom setup coming soon
-                    </option>
                   </select>
                 </label>
+                {draft.task === "other" && (
+                  <label>
+                    Execution mode
+                    <select
+                      aria-label="Execution mode"
+                      value={draft.mode ?? "single_call"}
+                      onChange={(e) =>
+                        changeProfile(
+                          "other",
+                          draft.language,
+                          false,
+                          e.target.value as "single_call" | "opencode",
+                        )
+                      }
+                    >
+                      <option value="single_call">
+                        Single API call — report only
+                      </option>
+                      <option value="opencode">
+                        OpenCode — disposable edits
+                      </option>
+                    </select>
+                  </label>
+                )}
                 {draft.task === "test_generation" && (
                   <label>
                     Test language
@@ -478,15 +529,24 @@ export function ExecutionSetup({
                     />
                   </label>
                 </section>
-                {profile && (
-                  <TaskFields
-                    profile={profile}
-                    fields={draft.fields}
-                    onChange={(fields) =>
-                      setDraft((d) => ({ ...d, fields, dirtyConfig: true }))
-                    }
-                  />
-                )}
+                {profile &&
+                  (profile.task === "other" ? (
+                    <OtherFields
+                      profile={profile}
+                      fields={draft.fields}
+                      onChange={(fields) =>
+                        setDraft((d) => ({ ...d, fields, dirtyConfig: true }))
+                      }
+                    />
+                  ) : (
+                    <TaskFields
+                      profile={profile}
+                      fields={draft.fields}
+                      onChange={(fields) =>
+                        setDraft((d) => ({ ...d, fields, dirtyConfig: true }))
+                      }
+                    />
+                  ))}
                 <button
                   className="primary-action"
                   disabled={!valid || !draft.name.trim() || checking}

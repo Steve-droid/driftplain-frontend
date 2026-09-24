@@ -1,3 +1,4 @@
+import { otherConfig, otherDefaults, otherFieldsFrom } from "./other";
 import { getToken } from "../api/client";
 import type {
   Candidate,
@@ -11,15 +12,22 @@ export const taskNames: Record<Task, string> = {
   security_analysis: "Security analysis",
   test_generation: "Test generation",
   ci_failure_diagnosis: "CI failure diagnosis",
+  other: "Other — define your own task",
 };
 export function profileFor(
   task: Task,
   language: "python" | "node" = "python",
   fix = false,
+  mode: Profile["mode"] = "single_call",
 ): Profile {
   return {
     task,
-    mode: task === "ci_review" ? "single_call" : "opencode",
+    mode:
+      task === "other"
+        ? mode
+        : task === "ci_review"
+          ? "single_call"
+          : "opencode",
     language: task === "test_generation" ? language : null,
     proposeFix: task === "ci_failure_diagnosis" && fix,
   };
@@ -63,6 +71,7 @@ export function setupHref(
 }
 export function defaultFields() {
   return {
+    ...otherDefaults(),
     instructions: "",
     files: "",
     writePaths: "tests",
@@ -83,6 +92,7 @@ export const lines = (text: string) =>
     .map((s) => s.trim())
     .filter(Boolean);
 export function configFor(p: Profile, f: Fields): TaskConfiguration {
+  if (p.task === "other") return otherConfig(p.mode, f);
   const config: TaskConfiguration = {
     instructions: f.instructions.trim() || null,
     inputs: {
@@ -151,6 +161,7 @@ export function fieldsFrom(
   const c = config.validationCommands?.[0];
   return {
     ...defaultFields(),
+    ...otherFieldsFrom(config),
     instructions: config.instructions ?? "",
     files: config.inputs?.files.join("\n") ?? "",
     writePaths: config.writePaths?.join("\n") ?? "",
@@ -169,6 +180,7 @@ export function fieldsFrom(
 }
 export interface Draft {
   task: Task | null;
+  mode?: Profile["mode"];
   language: "python" | "node";
   fix: boolean;
   name: string;
@@ -194,7 +206,7 @@ const key = (project: number | null) =>
 export function loadDraft(project: number | null): Draft | null {
   try {
     const raw = sessionStorage.getItem(key(project));
-    if (!raw || raw.length > 64000) return null;
+    if (!raw || new TextEncoder().encode(raw).length > 64000) return null;
     const d = JSON.parse(raw) as Draft;
     if (
       (d.task !== null && !Object.hasOwn(taskNames, d.task)) ||
@@ -202,24 +214,48 @@ export function loadDraft(project: number | null): Draft | null {
       typeof d.fix !== "boolean" ||
       typeof d.name !== "string" ||
       !d.fields ||
-      Object.keys(defaultFields()).some(
-        (k) =>
-          typeof d.fields[k as keyof Fields] !== "string" ||
-          d.fields[k as keyof Fields].length > 16000,
+      Object.keys(defaultFields())
+        .filter((k) => !Object.hasOwn(otherDefaults(), k))
+        .some((k) => typeof d.fields[k as keyof Fields] !== "string")
+    )
+      return null;
+    if (d.mode !== undefined && !["single_call", "opencode"].includes(d.mode))
+      return null;
+    if (d.task === "other" && !d.mode) return null;
+    if (
+      Object.entries(d.fields).some(
+        ([k, v]) => !Object.hasOwn(defaultFields(), k) || typeof v !== "string",
       )
     )
       return null;
-    return d;
+    return { ...d, fields: { ...defaultFields(), ...d.fields } };
   } catch {
     return null;
   }
 }
-export function saveDraft(project: number | null, d: Draft) {
+export function serializedDraft(d: Draft) {
+  // Custom fields represent every supported configuration setting. Avoid storing a
+  // second full copy of prompts after an edit, keeping navigation drafts bounded.
+  return JSON.stringify(
+    d.task === "other" && d.dirtyConfig
+      ? { ...d, configuration: undefined }
+      : d,
+  );
+}
+export function draftTooLarge(d: Draft) {
+  return new TextEncoder().encode(serializedDraft(d)).length > 64000;
+}
+export function saveDraft(project: number | null, d: Draft): boolean {
   try {
-    const raw = JSON.stringify(d);
-    if (raw.length <= 64000) sessionStorage.setItem(key(project), raw);
+    const raw = serializedDraft(d);
+    if (new TextEncoder().encode(raw).length > 64000) {
+      sessionStorage.removeItem(key(project));
+      return false;
+    }
+    sessionStorage.setItem(key(project), raw);
+    return true;
   } catch {
-    /* browser storage may be disabled */
+    return false; // Browser storage may be disabled.
   }
 }
 export function clearDraft(project: number | null) {
