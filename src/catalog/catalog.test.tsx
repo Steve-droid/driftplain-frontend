@@ -129,6 +129,44 @@ describe("anonymous catalog", () => {
     expect(window.location.search).toContain("observations=10");
     await waitFor(() => expect(select).toHaveValue("10"));
   });
+  it("offers historical rows when selected models have no active evidence", async () => {
+    window.history.replaceState(null, "", "/compare?compare=m1,m2");
+    mock.mockImplementation(async (path) =>
+      path.startsWith("models/")
+        ? {
+            ...model,
+            id: Number(path.split("/")[1]),
+            name: path.endsWith("/1") ? "Alpha" : "Beta",
+          }
+        : page([benchmark]),
+    );
+    vi.mocked(allPages).mockImplementation(async (path) =>
+      path === "benchmarks"
+        ? [benchmark]
+        : path.includes("view=history")
+          ? [{
+              ...observation,
+              id: path.includes("modelId=2") ? 2 : 1,
+              sourceSnapshotId: null,
+              origin: "legacy_backfill",
+              provenanceStatus: "incomplete",
+            }]
+          : [],
+    );
+    render(<App />);
+    expect(await screen.findByText(/No active evidence for these choices/)).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Compare choices" })).not.toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Find source rows to compare" })).toHaveAttribute(
+      "href", "/evidence?compare=m1%2Cm2",
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Show historical evidence" }));
+    expect(new URLSearchParams(window.location.search).get("view")).toBe("history");
+    expect(await screen.findByRole("columnheader", { name: "Alpha" })).toBeInTheDocument();
+    expect(screen.getByRole("columnheader", { name: "Beta" })).toBeInTheDocument();
+    expect(screen.getByText(/Historical legacy rows have incomplete provenance/)).toBeInTheDocument();
+    expect(screen.getAllByText("Not reported in this scope")).toHaveLength(2);
+    expect(screen.getByRole("button", { name: "Viewing comparison" })).toBeDisabled();
+  });
 });
 describe("benchmark explanations", () => {
   it("restores focus and dismisses with Escape from the methodology link", () => {
