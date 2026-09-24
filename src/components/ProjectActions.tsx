@@ -1,3 +1,4 @@
+import { navigate } from "../catalog/navigation";
 import { useEffect, useRef, useState } from "react";
 import {
   Loader2,
@@ -54,6 +55,7 @@ export function ProjectActions({
 
   function open(v: View) {
     setMenuOpen(false);
+    if (project.executionRevisionId && (v === "cisetup" || v === "repick" || v === "editJenkins")) { navigate(`/setup?project=${project.id}`); return; }
     setView(v);
   }
   function close() {
@@ -81,6 +83,7 @@ export function ProjectActions({
           <MenuItem icon={<Plug size={13} />} label="Edit Jenkins" onClick={() => open("editJenkins")} />
           <MenuItem icon={<Terminal size={13} />} label="CI setup & token" onClick={() => open("cisetup")} />
           <MenuItem icon={<Pencil size={13} />} label="Re-pick model" onClick={() => open("repick")} />
+          {!project.executionRevisionId && <MenuItem icon={<Pencil size={13} />} label="Use named-task setup" onClick={() => navigate(`/setup?project=${project.id}`)} />}
           </>}
           <MenuItem
             icon={<Trash2 size={13} />}

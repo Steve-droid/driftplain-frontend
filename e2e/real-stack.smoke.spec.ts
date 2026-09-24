@@ -103,6 +103,8 @@ test("real backend: onboard a CI-Agent → ingest a real CI run → dashboard re
 
   // --- home → create a CI-Agent ---
   await page.getByRole("button", { name: "Set up a CI agent" }).first().click();
+  // This stack fixture seeds the legacy runtime; named verified-fixture journeys live in execution.spec.ts.
+  await page.goto("/legacy-setup");
   await expect(page.getByText("Set up your CI agent")).toBeVisible();
 
   // --- recommend (ci_review, High). Seeding was preflighted → this MUST appear now. ---

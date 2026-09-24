@@ -1,3 +1,4 @@
+import { setupHref } from "../execution/draft";
 import type { Benchmark, Observation, Metric, Source } from "./types";
 import { BenchmarkName } from "./BenchmarkName";
 import { formatMetric, safeUrl } from "./evidence";
@@ -185,6 +186,19 @@ export function EvidenceTable({
                       : o.sourceModelLabel}
                   </small>
                   <EvidenceDetails observation={o} />
+                  {o.modelId != null && (
+                    <Link
+                      href={setupHref(
+                        o.modelId,
+                        o.id,
+                        new URLSearchParams(window.location.search).get(
+                          "setupReturn",
+                        ),
+                      )}
+                    >
+                      Use this evidence in CI
+                    </Link>
+                  )}
                 </td>
                 <td>
                   {b ? (

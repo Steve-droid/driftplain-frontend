@@ -67,7 +67,7 @@ describe("App routing", () => {
     render(<App />);
 
     fireEvent.click((await screen.findAllByRole("button", { name: /set up a ci agent/i }))[0]);
-    expect(await screen.findByText(/Set up your CI agent/)).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Choose a task. Pick an exact model." })).toBeInTheDocument();
   });
 
   it("the dashboard logo returns to the home hub", async () => {
@@ -204,8 +204,8 @@ describe("Navigation transitions", () => {
     fireEvent.click(screen.getAllByRole("button", { name: /view my ci agents/i })[0]);
     fireEvent.click(screen.getAllByRole("button", { name: /set up a ci agent/i })[0]);
     act(() => { for (const update of updates) update(); });
-    expect(screen.getByRole("region", { name: "Set up a CI agent" })).toBeInTheDocument();
-    expect(window.history.state.mmPhase).toBe("onboarding");
+    expect(screen.getByRole("heading", { name: "Choose a task. Pick an exact model." })).toBeInTheDocument();
+    expect(window.location.pathname).toBe("/setup");
     expect(getSavings).not.toHaveBeenCalled();
   });
 
@@ -215,7 +215,7 @@ describe("Navigation transitions", () => {
     vi.mocked(listProjects).mockResolvedValue(projectsFixture);
     render(<App />);
     fireEvent.click((await screen.findAllByRole("button", { name: /set up a ci agent/i }))[0]);
-    expect(screen.getByRole("region", { name: "Set up a CI agent" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Choose a task. Pick an exact model." })).toBeInTheDocument();
     expect(start).not.toHaveBeenCalled();
   });
 

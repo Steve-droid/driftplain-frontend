@@ -3,7 +3,8 @@ import { mockBackend } from "./mock-backend";
 import { projectsFixture, securitySavingsFixture } from "../src/test/fixtures";
 
 // The S17 happy path: drive the REAL frontend end-to-end against a fully mocked backend
-// (route interception). Login → home hub → "Set up a CI agent" → recommend
+// (route interception). B13 routes the CTA to named setup; this compatibility test
+// then opens /legacy-setup → recommend
 // (ci_review) → pick → defer-create at the Jenkins step → CI-setup token → dashboard
 // (seeded by a mocked CI run) → grounded chat opener → ask one grounded question.
 //
@@ -29,6 +30,9 @@ test("login → home → create a CI-Agent → dashboard → grounded chat", asy
 
   // --- home → onboarding (drive the real CTA, not a deep link) ---
   await createCta.click();
+  await expect(page.getByRole("heading", {name:"Choose a task. Pick an exact model."})).toBeVisible();
+  // The legacy consumer remains supported until B17; named journeys are in execution.spec.ts.
+  await page.goto("/legacy-setup");
   await expect(page.getByText("Set up your CI agent")).toBeVisible();
 
   // --- recommender (ci_review, budget-sensitivity High → Nova suggested) ---
@@ -219,6 +223,10 @@ for (const reducedMotion of ["no-preference", "reduce"] as const) {
     await expect.poll(() => page.evaluate(() => document.documentElement.scrollHeight - innerHeight)).toBeLessThan(2);
     await page.getByRole("button", { name: "Set up a CI agent", exact: true }).click();
     await expect(page.getByRole("region", { name: "Set up a CI agent", exact: true })).toBeFocused();
+    await expect(page.getByLabel("Task", {exact:true})).toHaveValue("");
+    await expect(page.getByRole("group", {name:"Budget sensitivity"})).toHaveCount(0);
+    // Retain the legacy control and focus regression separately.
+    await page.goto("/legacy-setup");
     const budget = page.getByRole("group", { name: "Budget sensitivity", exact: true });
     const speed = page.getByRole("group", { name: "CI-Agent speed", exact: true });
     await expect(budget.getByRole("button", { name: "High", exact: true })).toHaveAttribute("aria-pressed", "true");

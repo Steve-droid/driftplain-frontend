@@ -20,7 +20,16 @@ export function useLocation() {
 export function withChoices(href: string) {
   const url = new URL(href, window.location.origin);
   if (url.origin !== window.location.origin) return href;
-  const compare = new URLSearchParams(window.location.search).get("compare");
+  const params = new URLSearchParams(window.location.search);
+  const compare = params.get("compare");
+  const setupReturn = params.get("setupReturn");
+  if (
+    setupReturn &&
+    /^\/setup(?:\?|$)/.test(setupReturn) &&
+    /^\/(benchmarks|models|compare|evidence)(\/|$)/.test(url.pathname) &&
+    !url.searchParams.has("setupReturn")
+  )
+    url.searchParams.set("setupReturn", setupReturn);
   if (
     url.origin === window.location.origin &&
     /^\/(benchmarks|models|compare|evidence)(\/|$)/.test(url.pathname) &&

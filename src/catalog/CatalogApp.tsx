@@ -1,3 +1,4 @@
+import { setupHref } from "../execution/draft";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import type {
   Benchmark,
@@ -25,7 +26,19 @@ export function CatalogNav() {
       </Link>
       <div>
         <Link href="/benchmarks">Explore Benchmarks</Link>
-        <Link href="/setup">Set Up CI</Link>
+        <Link
+          href={
+            new URLSearchParams(window.location.search)
+              .get("setupReturn")
+              ?.match(/^\/setup(?:\?|$)/)
+              ? new URLSearchParams(window.location.search).get("setupReturn")!
+              : "/setup"
+          }
+        >
+          {new URLSearchParams(window.location.search).has("setupReturn")
+            ? "Return to CI setup"
+            : "Set Up CI"}
+        </Link>
         <Link href="/projects">My Projects</Link>
       </div>
     </nav>
@@ -312,9 +325,16 @@ function ModelProfile({ id, ...props }: ViewProps & { id: number }) {
             Add to compare
           </button>
           <div className="catalog-notice">
-            <button disabled className="secondary-action">
+            <Link
+              className="secondary-action"
+              href={setupHref(
+                id,
+                null,
+                new URLSearchParams(window.location.search).get("setupReturn"),
+              )}
+            >
               Use in CI
-            </button>
+            </Link>
             <p>
               CI support is not established by catalog evidence. Check Set Up CI
               for available configurations.

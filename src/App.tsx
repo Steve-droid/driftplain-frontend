@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { CatalogApp, CatalogNav } from "./catalog/CatalogApp";
-import { useLocation } from "./catalog/navigation";
+import { ExecutionSetup } from "./execution/ExecutionSetup";
+import { navigate, useLocation } from "./catalog/navigation";
 import { Loader2 } from "lucide-react";
 import { ApiError, clearToken, getToken } from "./api/client";
 import { listProjects } from "./api/projects";
@@ -42,7 +43,7 @@ function AuthenticatedApp() {
   }, [cancel]);
 
   const handleAuthed = () => {
-    window.history.replaceState({ mmPhase: window.location.pathname === "/setup" ? "onboarding" : window.location.pathname === "/projects" ? "dashboard" : "home" }, "");
+    window.history.replaceState({ mmPhase: ["/setup", "/legacy-setup"].includes(window.location.pathname) ? "onboarding" : window.location.pathname === "/projects" ? "dashboard" : "home" }, "");
     setPhase("loading");
     setAuthed(true);
   };
@@ -88,11 +89,12 @@ function AuthenticatedApp() {
     if (!authed) return;
     let live = true;
     const landOn = () => {
+      if (window.location.pathname === "/setup") { setPhase("onboarding"); return; }
       const saved = (window.history.state as { mmPhase?: Phase } | null)?.mmPhase;
       const restored: Phase =
         saved === "dashboard" || saved === "onboarding" || saved === "home"
           ? saved
-          : window.location.pathname === "/setup" ? "onboarding" : window.location.pathname === "/projects" ? "dashboard" : "home";
+          : ["/setup", "/legacy-setup"].includes(window.location.pathname) ? "onboarding" : window.location.pathname === "/projects" ? "dashboard" : "home";
       // Seed the landing history entry only when there isn't one yet (replace, not push,
       // so Back from home leaves the app cleanly); on a reload we keep the saved entry.
       if (saved == null) window.history.replaceState({ mmPhase: restored }, "");
@@ -127,6 +129,10 @@ function AuthenticatedApp() {
       />
     );
 
+  if (window.location.pathname === "/setup") {
+    return <PageSurface key={window.location.search} name="Set up a CI agent"><ExecutionSetup onUnauthorized={handleUnauthorized} /></PageSurface>;
+  }
+
   if (phase === "loading") {
     return (
       <AuthLayout>
@@ -142,7 +148,7 @@ function AuthenticatedApp() {
     return (
       <PageSurface key="home" name="Home"><Home
         onViewAgents={() => go("dashboard")}
-        onCreateAgent={() => go("onboarding")}
+        onCreateAgent={() => { cancel(); navigate("/setup"); }}
         onLogout={handleLogout}
       /></PageSurface>
     );
@@ -169,7 +175,7 @@ function AuthenticatedApp() {
   return (
     <PageSurface key="dashboard" name="CI agents dashboard"><Dashboard
       initialProjectId={activeProjectId}
-      onNewProject={() => go("onboarding")}
+      onNewProject={() => { cancel(); navigate("/setup"); }}
       onHome={() => go("home")}
       onUnauthorized={handleUnauthorized}
     /></PageSurface>

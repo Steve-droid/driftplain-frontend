@@ -33,6 +33,6 @@ for (const width of [1440, 390]) {
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
     await page.screenshot({ path: `test-results/p38p-examples-${width}.png`, fullPage: true, animations: "disabled" });
     await page.getByRole("button", { name: "Create your own CI agent", exact: true }).click();
-    await expect(page.getByText("Set up your CI agent", { exact: true })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Choose a task. Pick an exact model.", exact: true })).toBeVisible();
   });
 }
