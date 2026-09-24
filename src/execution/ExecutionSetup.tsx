@@ -392,7 +392,7 @@ export function ExecutionSetup({
                       </option>
                     ))}
                     <option disabled>
-                      Other — custom authoring follows in B14
+                      Other — custom setup coming soon
                     </option>
                   </select>
                 </label>
