@@ -34,7 +34,8 @@ async function fixtures(page: Page, signedIn = true) {
     saved: ProjectInput[];
     disabled: boolean;
     connectionFails: boolean;
-  } = { saved: [], disabled: false, connectionFails: false };
+    legacy: boolean;
+  } = { saved: [], disabled: false, connectionFails: false, legacy: false };
   await page.route("**/catalog/v1/**", async (route) => {
     const url = new URL(route.request().url());
     const path = url.pathname.split("/catalog/v1/")[1];
@@ -76,7 +77,9 @@ async function fixtures(page: Page, signedIn = true) {
         json: { baseUrl: "https://ci.example.org", jobName: "review" },
       });
     }
-    return route.fulfill({ json: [] });
+    return route.fulfill({
+      json: state.legacy ? [{ id: 7, name: "Legacy custom transition" }] : [],
+    });
   });
   const project = (input: ProjectInput) => ({
     id: 7,
@@ -171,6 +174,11 @@ async function fixtures(page: Page, signedIn = true) {
       state.saved.push(input);
       return route.fulfill({ json: project(input) });
     }
+    if (state.legacy && !state.saved.length)
+      return route.fulfill({
+        status: 422,
+        json: { detail: "Legacy project requires selection" },
+      });
     return route.fulfill({
       json: project(
         state.saved.at(-1) ?? {
@@ -390,4 +398,156 @@ test("same-profile re-pick preserves existing configuration and preferences", as
   expect(state.saved.at(-1)?.reviewPreferences).toBe(
     original.reviewPreferences,
   );
+});
+
+for (const mode of ["single_call", "opencode"] as const) {
+  test(`Other ${mode}: literal authoring, Explorer restoration and exact save`, async ({
+    page,
+  }, testInfo) => {
+    const state = await fixtures(page);
+    await page.goto("/setup?model=1&evidence=1");
+    await page.getByLabel("Task", { exact: true }).selectOption("other");
+    await page.getByLabel("Execution mode").selectOption(mode);
+    await page.getByLabel("Editable starter template").selectOption("docs");
+    await page
+      .getByRole("button", { name: "Replace prompt text with template" })
+      .click();
+    const prompt = " Literal ${BUILD_TAG}\n$(whoami) @file instructions ";
+    await page.getByLabel("Task instructions", { exact: true }).fill(prompt);
+    await page.getByLabel("Input files").fill("README.md");
+    await page.getByLabel("Input artifacts").fill("build.log");
+    if (mode === "opencode") {
+      await page.getByLabel("Permitted write paths").fill("docs");
+      await page.getByLabel("Maintainer validation commands").fill(
+        JSON.stringify([
+          {
+            id: "docs",
+            argv: ["python", "check.py"],
+            environmentImage: "checks@sha256:" + "a".repeat(64),
+            required: true,
+            maxSeconds: 30,
+          },
+        ]),
+      );
+    }
+    await page.getByRole("button", { name: /Choose Alpha 1/ }).click();
+    await page.getByLabel("Project name").fill("Custom docs");
+    await expect(
+      page.getByRole("button", { name: "Continue to Jenkins" }),
+    ).toBeEnabled();
+    await page.getByRole("link", { name: "Inspect the full Explorer" }).click();
+    await page.getByRole("link", { name: "Return to CI setup" }).click();
+    await page.reload();
+    await expect(page.getByLabel("Execution mode")).toHaveValue(mode);
+    await expect(
+      page.getByLabel("Task instructions", { exact: true }),
+    ).toHaveValue(prompt);
+    await expect(
+      page.getByRole("button", { name: "Continue to Jenkins" }),
+    ).toBeEnabled();
+    expect(
+      await page.getByLabel("Task instructions preview").textContent(),
+    ).toBe(prompt);
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= window.innerWidth,
+      ),
+    ).toBe(true);
+    await page.screenshot({
+      path: `/tmp/b14-${mode}-${testInfo.project.name}.png`,
+      fullPage: true,
+      animations: "disabled",
+    });
+    await page.getByRole("button", { name: "Continue to Jenkins" }).click();
+    await page.getByLabel("Jenkins base URL").fill("https://ci.example.org");
+    await page.getByLabel("Job name").fill("custom");
+    await page.getByRole("button", { name: "Continue", exact: true }).click();
+    await expect(
+      page.getByRole("heading", { name: "Versioned CI setup" }),
+    ).toBeVisible();
+    const saved = state.saved.at(-1)!;
+    expect(saved.selection).toMatchObject({
+      task: "other",
+      mode,
+      runtimeId: 1,
+      observationId: 1,
+      method: "supported_unranked",
+    });
+    expect(saved.taskConfiguration.instructions).toBe(prompt);
+    expect(saved.taskConfiguration.inputs).toMatchObject({
+      files: ["README.md"],
+      artifacts: ["build.log"],
+    });
+    expect(saved.taskConfiguration.writePaths).toEqual(
+      mode === "opencode" ? ["docs"] : [],
+    );
+    expect(saved.taskConfiguration.validationCommands).toHaveLength(
+      mode === "opencode" ? 1 : 0,
+    );
+    await page.goto("/setup?project=7");
+    await expect(page.getByLabel("Execution mode")).toHaveValue(mode);
+    await expect(
+      page.getByLabel("Task instructions", { exact: true }),
+    ).toHaveValue(prompt);
+    await page.getByLabel("Task label").fill("Edited custom label");
+    await page.getByRole("button", { name: "Continue to Jenkins" }).click();
+    await page.getByRole("button", { name: "Continue", exact: true }).click();
+    await expect(
+      page.getByRole("heading", { name: "Versioned CI setup" }),
+    ).toBeVisible();
+    expect(state.saved.at(-1)?.taskConfiguration).toEqual({
+      ...saved.taskConfiguration,
+      label: "Edited custom label",
+    });
+  });
+}
+
+test("Other mode transition retains invalid pick and blocks newly pending profile", async ({
+  page,
+}) => {
+  const state = await fixtures(page);
+  await page.goto("/setup");
+  await pick(page, "other");
+  await page.getByLabel("Execution mode").selectOption("opencode");
+  await expect(page.getByText(/Previous pick:/)).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Continue to Jenkins" }),
+  ).toBeDisabled();
+  state.disabled = true;
+  await page.reload();
+  await expect(page.getByText(/No eligible runnable model/)).toBeVisible();
+  await expect(page.getByRole("button", { name: /Choose Alpha/ })).toHaveCount(
+    0,
+  );
+  expect(state.saved).toHaveLength(0);
+});
+
+test("legacy transition to Other uses explicit mode and keyboard selection", async ({
+  page,
+}) => {
+  const state = await fixtures(page);
+  state.legacy = true;
+  await page.goto("/setup?project=7");
+  await expect(page.getByLabel("Project name")).toHaveValue(
+    "Legacy custom transition",
+  );
+  await page.getByLabel("Task", { exact: true }).selectOption("other");
+  await page.getByLabel("Execution mode").selectOption("opencode");
+  await expect(page.getByLabel("Execution mode")).toHaveValue("opencode");
+  await page.getByLabel("Editable starter template").selectOption("docs");
+  await page
+    .getByRole("button", { name: "Replace prompt text with template" })
+    .click();
+  await page.getByLabel("Permitted write paths").fill("docs");
+  await page.getByRole("button", { name: /Choose Alpha 1/ }).focus();
+  await page.keyboard.press("Enter");
+  await page.getByRole("button", { name: "Continue to Jenkins" }).click();
+  await page.getByRole("button", { name: "Continue", exact: true }).click();
+  await expect(
+    page.getByRole("heading", { name: "Versioned CI setup" }),
+  ).toBeVisible();
+  expect(state.saved.at(-1)?.selection).toMatchObject({
+    task: "other",
+    mode: "opencode",
+  });
 });

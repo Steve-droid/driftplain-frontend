@@ -41,3 +41,30 @@ Checks: `npm test`, `npm run test:integration`, `npm run typecheck`, `npm run li
 `npx playwright test --config playwright.config.execution.ts` and `playwright.config.catalog.ts`.
 Browser tests use synthetic API routes for all four tasks on desktop/mobile, exact evidence and
 anonymous sign-in return, profile changes, disabled picks, edits and partial-save retries.
+
+## B14 — Other authoring
+
+Other is the fifth task with an explicit `single_call` or `opencode` mode. The shared
+picker searches only exact eligible source-backed choices; Other has no recommendation
+policy. Full Explorer remains anonymous and unconstrained by runtime support. Mode changes
+clear selection eligibility while preserving the previous label and custom authoring fields;
+a fresh explicit choice is required even if a provider supports both modes. Restore and save
+revalidate exact runtime/observation identity. Legacy transitions use the same versioned API.
+
+`OtherFields` and `other.ts` keep custom authoring separate from named runner settings.
+Templates replace only label/system/task text after an explicit button press. Prompts remain
+literal, including whitespace, CI variables and shell-like text. Preview shows exact text,
+report-only versus disposable-edit authority, and missing validation as not run/unverified.
+Inputs are bounded literal file paths/named artifacts; UI and API independently reject invalid
+shape/limits. The executor enforces bytes, actual file types and symlink containment.
+Maintainer validators are up to five unique JSON argv/digest-pinned-image configurations;
+no named-test coverage is inferred from a custom command exit. Single-call config emits no
+write paths/validators and pins one generation/attempt. All supported input/resource ceilings
+round-trip through custom edits; no extra executable authority is sent from the client.
+
+Drafts retain the v1 namespace and restore pre-B14 named fields with new defaults. Storage
+uses a 64,000 UTF-8-byte bound, removes stale drafts on overflow, and warns visibly before
+navigation. Dirty custom drafts omit the duplicate original configuration because their
+fields represent all supported settings. Provider keys and CI tokens remain absent.
+Backend Other setup supplies a dedicated failure-preserving Custom task Jenkins stage.
+Tests use synthetic verified fixtures; the six actual Other integrations remain pending.

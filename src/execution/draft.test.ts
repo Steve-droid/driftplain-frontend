@@ -100,3 +100,66 @@ it("scopes stored drafts to the signed-in identity and rejects damaged fields", 
   localStorage.clear();
   sessionStorage.clear();
 });
+
+it("retains valid pre-B14 named drafts and removes oversized stale drafts", async () => {
+  const { loadDraft, saveDraft } = await import("./draft");
+  const { otherDefaults } = await import("./other");
+  const fields = Object.fromEntries(
+    Object.entries(defaultFields()).filter(
+      ([k]) => !Object.hasOwn(otherDefaults(), k),
+    ),
+  );
+  const old = {
+    task: "ci_review",
+    language: "python",
+    fix: false,
+    name: "Legacy draft",
+    fields,
+    selection: null,
+    label: "",
+    projectId: null,
+  };
+  sessionStorage.setItem(
+    "driftplain-ci-draft-v1:anonymous:new",
+    JSON.stringify(old),
+  );
+  expect(loadDraft(null)?.name).toBe("Legacy draft");
+  expect(
+    saveDraft(null, {
+      ...old,
+      task: "other",
+      mode: "single_call",
+      language: "python",
+      fields: {
+        ...defaultFields(),
+        instructions: "字".repeat(16000),
+        systemPrompt: "字".repeat(8000),
+      },
+    }),
+  ).toBe(false);
+  expect(loadDraft(null)).toBeNull();
+  sessionStorage.clear();
+});
+
+it("restores bounded existing configuration fields beyond the new-authoring field limit", async () => {
+  const { saveDraft, loadDraft } = await import("./draft");
+  const d = {
+    task: "other" as const,
+    mode: "opencode" as const,
+    language: "python" as const,
+    fix: false,
+    name: "Existing",
+    fields: {
+      ...defaultFields(),
+      validationCommands: " ".repeat(17000) + "[]",
+    },
+    selection: null,
+    label: "",
+    projectId: 7,
+  };
+  expect(saveDraft(7, d)).toBe(true);
+  expect(loadDraft(7)?.fields.validationCommands).toBe(
+    d.fields.validationCommands,
+  );
+  sessionStorage.clear();
+});

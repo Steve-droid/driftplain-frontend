@@ -56,6 +56,8 @@ export function CandidateEvidence({ item }: { item: Candidate }) {
   );
 }
 const explanations: Record<Profile["task"], string> = {
+  other:
+    "Choose a model for your custom task. Benchmark results help you compare models; Driftplain has not matched a benchmark to this task. Only exact support for the selected mode permits a choice.",
   ci_review:
     "CodeReviewBench F1 measures review findings against confirmed bugs. Recommendations require the same complete 30-PR / 95-bug Kodus replay protocol, judge and reasoning settings.",
   security_analysis:
@@ -118,14 +120,16 @@ export function EligibleModelPicker({
     <section className="ci-panel" aria-label="Eligible model picker">
       <h2>Pick an eligible model</h2>
       <p>{explanations[profile.task]}</p>
-      <details>
-        <summary>How recommendations work</summary>
-        <p>
-          Scores only order eligible choices inside one explicitly selected
-          comparable group. A benchmark runner is evidence, not this project's
-          execution runner. Prices and speed never change this order.
-        </p>
-      </details>
+      {profile.task !== "other" && (
+        <details>
+          <summary>How recommendations work</summary>
+          <p>
+            Scores only order eligible choices inside one explicitly selected
+            comparable group. A benchmark runner is evidence, not this project's
+            execution runner. Prices and speed never change this order.
+          </p>
+        </details>
+      )}
       <label>
         Search these models
         <input
@@ -144,25 +148,27 @@ export function EligibleModelPicker({
             Policy {data.policy.version} ·{" "}
             {data.policy.benchmarkVersion ?? "No primary benchmark policy"}
           </p>
-          <label>
-            Recommendation group
-            <select
-              aria-label="Recommendation group"
-              value={group ?? ""}
-              onChange={(e) => {
-                setGroup(e.target.value || null);
-                setOffset(0);
-              }}
-            >
-              <option value="">Supported choices (unranked)</option>
-              {data.groups.map((g, n) => (
-                <option key={g.id} value={g.id}>
-                  Comparable group {n + 1} · {g.supportedResults} supported /{" "}
-                  {g.totalResults} source results · {g.id.slice(0, 8)}
-                </option>
-              ))}
-            </select>
-          </label>
+          {profile.task !== "other" && (
+            <label>
+              Recommendation group
+              <select
+                aria-label="Recommendation group"
+                value={group ?? ""}
+                onChange={(e) => {
+                  setGroup(e.target.value || null);
+                  setOffset(0);
+                }}
+              >
+                <option value="">Supported choices (unranked)</option>
+                {data.groups.map((g, n) => (
+                  <option key={g.id} value={g.id}>
+                    Comparable group {n + 1} · {g.supportedResults} supported /{" "}
+                    {g.totalResults} source results · {g.id.slice(0, 8)}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
           {data.total === 0 ? (
             <p role="status">
               {exact.model
