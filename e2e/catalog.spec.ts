@@ -130,7 +130,7 @@ test("server alias search is keyboard navigable and profile deep links survive r
   await expect(
     page.getByRole("heading", { name: "Beta 2", exact: true }),
   ).toBeVisible();
-  await expect(page.getByRole("button", { name: "Use in CI" })).toBeDisabled();
+  await expect(page.getByRole("link", { name: "Use in CI", exact: true })).toHaveAttribute("href", "/setup?model=2");
 });
 
 test("long frozen revisions fit the mobile cards", async ({ page }) => {
@@ -166,7 +166,7 @@ for (const destination of ["/setup", "/projects"]) {
     await page.getByRole("button", { name: "Sign in" }).click();
     if (destination === "/setup")
       await expect(
-        page.getByRole("region", { name: "Set up a CI agent", exact: true }),
+        page.getByRole("heading", { name: "Choose a task. Pick an exact model.", exact: true }),
       ).toBeVisible();
     else
       await expect(

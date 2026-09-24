@@ -5,9 +5,9 @@ export interface Project {
   id: number;
   name: string;
   userId: number;
-  selectedOptionId: number;
+  selectedOptionId: number | null;
   selectedOptionModel: string; // the recommended model behind the selected option
-  baselineModelId: number;
+  baselineModelId: number | null;
   baselineModel: string;
   baselineVendor: string;
   // E20: the ONE task this project's agent runs (catalog vocabulary: "ci_review" |
@@ -20,4 +20,5 @@ export interface Project {
   setupComplete: boolean;
   // Optional for compatibility while the backend rolls out this capability.
   isExample?: boolean;
+  executionRevisionId?: number | null;
 }

@@ -1,0 +1,128 @@
+.ci-setup {
+  max-width: 1080px;
+  margin: auto;
+  padding: 36px 24px 80px;
+  line-height: 1.6;
+}
+.ci-setup h1 {
+  font-size: clamp(1.7rem, 4vw, 2.7rem);
+  font-weight: 650;
+  margin: 8px 0 14px;
+}
+.ci-setup h2 {
+  font-size: 1.3rem;
+  font-weight: 600;
+  margin-bottom: 12px;
+}
+.ci-setup h3 {
+  font-size: 1.1rem;
+  margin: 20px 0 10px;
+}
+.ci-setup h4 {
+  font-weight: 650;
+  font-size: 1.1rem;
+}
+.ci-panel {
+  padding: 24px;
+  border: 1px solid var(--color-border, #303848);
+  border-radius: 16px;
+  margin: 22px 0;
+  background: var(--color-panel, #121925);
+}
+.ci-setup label {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  margin: 16px 0;
+  max-width: 760px;
+}
+.ci-setup input,
+.ci-setup textarea,
+.ci-setup select {
+  background: #0c1421;
+  color: #edf1f7;
+  border: 1px solid #435065;
+  border-radius: 8px;
+  padding: 10px;
+  max-width: 100%;
+  min-width: 0;
+}
+.ci-setup .ci-checkbox {
+  flex-direction: row;
+  align-items: center;
+}
+.ci-model {
+  border-top: 1px solid #374154;
+  padding: 20px 0;
+}
+.ci-evidence,
+.ci-muted {
+  font-size: 0.88rem;
+  color: #acb9cc;
+}
+.ci-evidence {
+  margin: 10px 0;
+}
+.ci-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin: 18px 0;
+}
+.ci-setup button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.ci-setup button:focus-visible,
+.ci-setup a:focus-visible {
+  outline: 2px solid #82baff;
+  outline-offset: 4px;
+}
+.ci-setup pre {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  background: #080d16;
+  padding: 16px;
+  border-radius: 8px;
+  font-size: 0.8rem;
+  margin: 14px 0;
+}
+.ci-setup [role="alert"] {
+  border-left: 3px solid #e8a77a;
+  padding: 10px 16px;
+}
+.ci-setup summary {
+  cursor: pointer;
+}
+.ci-setup p {
+  margin: 8px 0;
+}
+.ci-setup a {
+  color: #91c4ff;
+}
+.ci-setup .primary-action,
+.ci-setup .secondary-action {
+  display: inline-block;
+  margin-top: 8px;
+}
+@media (max-width: 600px) {
+  .ci-setup {
+    padding: 24px 14px;
+  }
+  .ci-panel {
+    padding: 16px;
+  }
+  .ci-setup button {
+    white-space: normal;
+    text-align: left;
+  }
+}
+/* Fieldsets default to min-content, which would let long evidence IDs widen mobile forms. */
+.ci-setup fieldset {
+  min-width: 0;
+  width: 100%;
+}
+.ci-setup {
+  overflow-wrap: anywhere;
+}
