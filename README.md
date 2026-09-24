@@ -2,30 +2,38 @@
 
 [Project overview](https://github.com/Steve-droid/driftplain) · [Open the app](https://driftplain.dev) · [Backend](https://github.com/Steve-droid/driftplain-backend) · [Infrastructure](https://github.com/Steve-droid/driftplain-infra) · [GitOps](https://github.com/Steve-droid/driftplain-gitops)
 
-This repo contains Driftplain's web app. It lets users configure an AI code review or security
-agent for Jenkins, then view the agent's findings, token usage and cost calculations.
-
-It uses React 19, TypeScript, Vite, Tailwind CSS and Recharts. The app calls the FastAPI backend
-over HTTP. In production, nginx serves the built static files.
+Driftplain's React/TypeScript web app separates public benchmark exploration from authenticated
+CI setup. Users inspect exact source evidence, choose an eligible task/model configuration and
+review reported usage, estimated costs and task results. nginx serves the production static app.
 
 ## Main pages
 
 | Page | What users do |
 |---|---|
-| Home | Switch between projects or start configuring a new agent. |
-| Agent setup | Choose a task and model, set review preferences and copy a generated Jenkins stage. The project is saved at the final step. |
-| Dashboard | Inspect runs and findings, give feedback, and view token usage and cost charts. New accounts include labeled example projects. |
-| Login and registration | Sign in with a password or Google. Google sign-in appears when the backend enables it. |
+| Explore Benchmarks / Models | Browse without an account, inspect source versions and compare matching result groups. |
+| Set Up CI | Explicitly choose review, security, test generation, failure diagnosis (optional fix), or Other (single-call/OpenCode). Configure the task and copy a Jenkins command. |
+| My Projects | Inspect executed revisions, results, usage and complete/partial/unavailable cost estimates. Give feedback on findings. Labeled examples remain illustrative. |
+| Login and registration | Password or operator-enabled Google sign-in. Provider credentials remain in Jenkins. |
 
-The dashboard also includes a chat panel for questions about usage. The hosted deployment has
-the assistant disabled, and the panel reports that it is offline.
+Benchmark evidence does not activate a runtime. Exact B8–B12 profiles still await live
+verification; eligible choices may be empty. Missing prices/usage stay unavailable, not zero.
+Feedback is not recall or a quality guarantee. Cost estimates cover reported work, not provider
+invoices. Stored historical comparison amounts remain limited and outside new accounting totals.
+The operator-only legacy chat remains offline at home; explicit-selection chat is unavailable.
+Historical conversations remain readable. No provider keys or one-time CI tokens enter drafts.
 
-The current dashboard compares a run's cost with the same token usage priced at a baseline
-model's rates. It does not run the baseline model, so the displayed difference is an estimate
-rather than measured savings.
+## B17 compatibility boundary (frontend 2.0.0)
 
-Model API keys stay in the user's Jenkins credentials store. Setup produces a separate
-project CI token that the agent uses to fetch its configuration and submit results.
+The weighted recommendation/create/re-pick workflow is retired. `/legacy-setup` now explains
+retirement and links to explicit setup; legacy project Re-pick model enters `/setup?project=id`.
+Existing history, Jenkins metadata and CI-token controls remain available. Explicit transition
+requires a fresh eligible source-backed choice and preserves the project's token and history.
+
+Use with backend **2.0.0** after its additive schema (head `b16c0a7a0001`) and compatible agents.
+Older frontend create/re-pick calls receive HTTP 410 after the backend upgrade, so coordinate
+that maintenance window. Public Explore can ship before CI activation. Publishing images does
+not deploy them, import data, activate runtime models/rates or enable B16 schedules. Rollback
+retains additive schema/history and disables affected entry points.
 
 ## Where to look
 
@@ -87,11 +95,12 @@ npm run e2e:google
 ```
 
 Vitest covers units and components. Integration tests use Testing Library and mocked HTTP
-responses. Playwright covers sign-in, agent setup, example projects, the dashboard and chat.
+responses. Playwright covers public evidence, exact task setup, retired legacy actions, examples, usage and historical chat.
 These tests make no paid model calls.
 
 `npm run e2e:all` also includes a smoke test against a local backend. That test skips when
-the backend is unavailable on port 8000.
+the backend is unavailable on port 8000. It expects a disposable database with no activated
+execution runtimes and verifies public reads, retirement and empty eligibility without paid calls.
 
 ## Releases and deployment
 

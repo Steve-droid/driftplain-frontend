@@ -16,8 +16,7 @@ export function WelcomeSection({ onCreateAgent, onViewAgents }: {
             {VALUE_PROP.headline}
           </h1>
           <p className="mt-6 max-w-md text-base leading-relaxed text-muted sm:text-lg">
-            Find a model for your code reviews. Run it in Jenkins.
-            Track what you save, with quality to back it up.
+            {VALUE_PROP.sub}
           </p>
           <div className="mt-9 flex flex-wrap gap-3">
             <button onClick={onCreateAgent} className="primary-action">Set up a CI agent <ArrowRight size={16} /></button>

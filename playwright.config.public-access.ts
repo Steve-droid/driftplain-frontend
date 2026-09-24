@@ -2,7 +2,7 @@ import { defineConfig, devices } from "@playwright/test";
 
 export default defineConfig({
   testDir: "./e2e",
-  testMatch: /(happy-path|public-access|example-projects)\.spec\.ts/,
+  testMatch: /(happy-path|public-access|example-projects|retirement)\.spec\.ts/,
   timeout: 30_000,
   workers: 1,
   use: { ...devices["Desktop Chrome"], baseURL: "http://127.0.0.1:5191" },

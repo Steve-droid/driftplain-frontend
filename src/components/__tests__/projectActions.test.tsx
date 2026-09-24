@@ -4,7 +4,6 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { ProjectActions } from "../ProjectActions";
 import {
   projectsFixture,
-  recommendationFixture,
   ciSetupFixture,
 } from "../../test/fixtures";
 
@@ -171,28 +170,13 @@ describe("ProjectActions", () => {
     expect(onChanged).toHaveBeenCalled();
   });
 
-  it("re-picks the model via a fresh recommendation and PATCHes the project", async () => {
-    vi.mocked(postRecommendation).mockResolvedValue(recommendationFixture);
-    vi.mocked(updateProject).mockResolvedValue({ ...project });
-    const onChanged = vi.fn();
-    render(<ProjectActions project={project} onChanged={onChanged} onDeleted={vi.fn()} />);
-
+  it("routes legacy re-picks to explicit selection without mutating the project", () => {
+    render(<ProjectActions project={project} onChanged={vi.fn()} onDeleted={vi.fn()} />);
     openMenu();
     fireEvent.click(screen.getByRole("menuitem", { name: /re-pick model/i }));
-
-    // recommender form → run it
-    fireEvent.click(await screen.findByRole("button", { name: /get recommendation/i }));
-    // name prefilled with the project name; save the re-pick
-    const saveBtn = await screen.findByRole("button", { name: /save changes/i });
-    fireEvent.click(saveBtn);
-
-    await waitFor(() =>
-      expect(updateProject).toHaveBeenCalledWith(1, {
-        name: "acme-api",
-        selectedOptionId: 11,
-        baselineModelId: 9,
-      }),
-    );
-    expect(onChanged).toHaveBeenCalled();
+    expect(window.location.pathname + window.location.search).toBe("/setup?project=1");
+    expect(postRecommendation).not.toHaveBeenCalled();
+    expect(updateProject).not.toHaveBeenCalled();
+    expect(screen.queryByText("Get recommendation")).not.toBeInTheDocument();
   });
 });

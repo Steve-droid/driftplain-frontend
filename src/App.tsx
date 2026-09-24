@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { CatalogApp, CatalogNav } from "./catalog/CatalogApp";
 import { ExecutionSetup } from "./execution/ExecutionSetup";
-import { navigate, useLocation } from "./catalog/navigation";
+import { Link, navigate, useLocation } from "./catalog/navigation";
 import { Loader2 } from "lucide-react";
 import { ApiError, clearToken, getToken } from "./api/client";
 import { listProjects } from "./api/projects";
@@ -9,7 +9,6 @@ import { Login } from "./pages/Login";
 import { Register } from "./pages/Register";
 import { Home } from "./pages/Home";
 import { Dashboard } from "./pages/Dashboard";
-import { Onboarding } from "./pages/Onboarding";
 import { AuthLayout } from "./components/AuthLayout";
 import { PageSurface } from "./components/PageSurface";
 import { usePageTransition } from "./lib/usePageTransition";
@@ -155,21 +154,13 @@ function AuthenticatedApp() {
   }
 
   if (phase === "onboarding") {
-    return (
-      <PageSurface key="onboarding" name="Set up a CI agent"><Onboarding
-        onUnauthorized={handleUnauthorized}
-        onHome={() => go("home")}
-        // Always allow returning to the dashboard — with defer-create a project may
-        // already exist mid-wizard (e.g. a CI-setup failure after create), so the user
-        // must never be trapped on the wizard. An empty dashboard just shows the
-        // "no agents yet" state.
-        onCancel={() => go("dashboard")}
-        onDone={(projectId) => {
-          setActiveProjectId(projectId);
-          go("dashboard");
-        }}
-      /></PageSurface>
-    );
+    return <PageSurface name="Legacy setup retired"><main className="mx-auto max-w-2xl p-8">
+      <h1 className="text-2xl font-semibold">Weighted recommendations have been retired.</h1>
+      <p className="my-4 text-muted">Choose an explicit source-backed model in CI setup.
+        Existing projects, CI tokens and run history remain available. If no eligible model
+        is listed, exact runtime verification is still pending.</p>
+      <nav className="flex flex-wrap gap-6"><Link href="/setup">Set Up CI</Link><Link href="/projects">My Projects</Link><Link href="/benchmarks">Explore Benchmarks</Link></nav>
+    </main></PageSurface>;
   }
 
   return (
