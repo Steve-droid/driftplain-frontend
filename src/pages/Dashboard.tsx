@@ -1,25 +1,15 @@
 import { BRAND_NAME } from "../lib/brand";
 import { useCallback, useEffect, useState } from "react";
 import { AlertTriangle, House, Plus } from "lucide-react";
-import type { SavingsRange, SavingsResponse } from "../types/savings";
+import type { SavingsRange } from "../types/savings";
 import type { Project } from "../types/project";
-import { getSavings } from "../api/savings";
+import { apiGet } from "../api/client";
+import type { UsageResponse } from "../usage/types";
+import { UsagePanel } from "../usage/UsagePanel";
 import { listProjects } from "../api/projects";
 import { ApiError } from "../api/client";
 import { getMe } from "../api/auth";
 import { ProjectActions } from "../components/ProjectActions";
-import {
-  formatPct,
-  formatPctFromRate,
-  formatUSD,
-  toNumber,
-} from "../lib/format";
-import { KpiCard, SavingsHero } from "../components/KpiCard";
-import { taskLabelOf } from "../lib/task";
-import { SavingsAreaChart } from "../components/SavingsAreaChart";
-import { CostPerRunBar } from "../components/CostPerRunBar";
-import { QualityTrend } from "../components/QualityTrend";
-import { RunsTable } from "../components/RunsTable";
 import { ProjectSwitcher } from "../components/ProjectSwitcher";
 import { ChatPanel } from "../components/ChatPanel";
 import markUrl from "../assets/brand/driftplain-mark.svg";
@@ -49,15 +39,18 @@ export function Dashboard({
   const [projectsError, setProjectsError] = useState<string | null>(null);
   const [projectId, setProjectId] = useState<number | null>(null);
 
+  const [offset, setOffset] = useState(0);
   const [range, setRange] = useState<SavingsRange>("all");
-  const [data, setData] = useState<SavingsResponse | null>(null);
+  const [data, setData] = useState<UsageResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  // Bumped after an edit/re-pick to force a savings refetch (the selected model/
-  // baseline may have changed).
+  // Refresh after project edits; each run retains its executed revision.
   const [refreshNonce, setRefreshNonce] = useState(0);
 
-  const handleUnauthorized = useCallback(() => onUnauthorized?.(), [onUnauthorized]);
+  const handleUnauthorized = useCallback(
+    () => onUnauthorized?.(),
+    [onUnauthorized],
+  );
   const [chatEnabled, setChatEnabled] = useState(false);
   const handleChatForbidden = useCallback(() => setChatEnabled(false), []);
 
@@ -68,16 +61,29 @@ export function Dashboard({
       const request = ++generation;
       try {
         const user = await getMe();
-        if (active && request === generation) setChatEnabled(user.chatEnabled === true);
+        if (active && request === generation)
+          setChatEnabled(user.chatEnabled === true);
       } catch (e) {
-        if (active && request === generation && e instanceof ApiError && e.status === 401) handleUnauthorized();
+        if (
+          active &&
+          request === generation &&
+          e instanceof ApiError &&
+          e.status === 401
+        )
+          handleUnauthorized();
       }
     };
-    const onFocus = () => { setChatEnabled(false); void refreshCapabilities(); };
+    const onFocus = () => {
+      setChatEnabled(false);
+      void refreshCapabilities();
+    };
     // Initial state is denied; focus refreshes also hide chat until confirmed.
     void refreshCapabilities();
     window.addEventListener("focus", onFocus);
-    return () => { active = false; window.removeEventListener("focus", onFocus); };
+    return () => {
+      active = false;
+      window.removeEventListener("focus", onFocus);
+    };
   }, [handleUnauthorized]);
 
   // Load the user's projects + (re)select the active one. Keeps the current selection
@@ -90,7 +96,8 @@ export function Dashboard({
       setProjects(list);
       setProjectsError(null);
       setProjectId((current) => {
-        if (current != null && list.some((p) => p.id === current)) return current;
+        if (current != null && list.some((p) => p.id === current))
+          return current;
         const preferred =
           initialProjectId != null
             ? list.find((p) => p.id === initialProjectId)?.id
@@ -128,13 +135,15 @@ export function Dashboard({
     window.history.replaceState(window.history.state, "", url);
   }, [projectId]);
 
-  // Load savings for the active project + range.
+  // Load reported-run usage for the active project, range and page.
   useEffect(() => {
     if (projectId == null) return;
     let live = true;
     setLoading(true);
     setError(null);
-    getSavings(projectId, range)
+    apiGet<UsageResponse>(
+      `/projects/${projectId}/usage/v1?range=${range}&offset=${offset}`,
+    )
       .then((res) => live && setData(res))
       .catch((e: unknown) => {
         if (!live) return;
@@ -146,23 +155,12 @@ export function Dashboard({
     return () => {
       live = false;
     };
-  }, [projectId, range, refreshNonce, handleUnauthorized]);
+  }, [projectId, range, offset, refreshNonce, handleUnauthorized]);
 
-  const k = data?.kpis;
   const noProjects = projects !== null && projects.length === 0;
   const activeProject = projects?.find((p) => p.id === projectId) ?? null;
-  // E20: when the pick IS the baseline there is nothing to save against — the savings
-  // hero and the actual-vs-baseline chart would show a $0 gap between a model and
-  // itself. Show the raw stats instead (Steve, 2026-09-08).
-  const pickIsBaseline =
-    data != null &&
-    data.selectedModel != null &&
-    data.baselineModel != null &&
-    data.selectedModel === data.baselineModel;
-  const taskLabel = taskLabelOf(data?.taskType ?? activeProject?.taskType);
 
-  // After an edit/re-pick: reload the project list (names/setup status) and refetch
-  // savings (model/baseline may have changed).
+  // Refresh project names/setup and reported results after edits.
   const handleChanged = useCallback(() => {
     void loadProjects();
     setRefreshNonce((n) => n + 1);
@@ -175,8 +173,7 @@ export function Dashboard({
     void loadProjects();
   }, [loadProjects]);
 
-  // After rating a finding: refetch savings only (a verdict may have flipped the run's
-  // quality_ok, re-banking or excluding its savings). No project-list reload needed.
+  // Feedback refreshes coverage; immutable charges are independent of verdicts.
   const handleRated = useCallback(() => {
     setRefreshNonce((n) => n + 1);
   }, []);
@@ -187,193 +184,113 @@ export function Dashboard({
         projects={projects ?? []}
         projectId={projectId}
         activeProject={activeProject}
-        onProject={setProjectId}
+        onProject={(id) => {
+          setOffset(0);
+          setProjectId(id);
+        }}
         onNewProject={onNewProject}
         onHome={onHome}
         onChanged={handleChanged}
         onDeleted={handleDeleted}
         onUnauthorized={handleUnauthorized}
         range={range}
-        onRange={setRange}
+        onRange={(r) => {
+          setOffset(0);
+          setData(null);
+          setRange(r);
+        }}
       />
 
       <main className="mx-auto max-w-[1600px] px-4 py-7 sm:px-6">
         {activeProject?.isExample && (
-          <section className="mb-5 rounded-xl border border-accent/30 bg-accent/5 p-4" aria-label="Example project">
-            <h2 className="text-sm font-semibold text-fg">{activeProject.name}</h2>
-            <p className="mt-1 text-sm text-muted">Explore this dashboard with sample CI runs. No CI connection or API key is required.</p>
-            {onNewProject && <button onClick={onNewProject} className="mt-3 text-sm font-medium text-accent">Create your own CI agent</button>}
+          <section
+            className="mb-5 rounded-xl border border-accent/30 bg-accent/5 p-4"
+            aria-label="Example project"
+          >
+            <h2 className="text-sm font-semibold text-fg">
+              {activeProject.name}
+            </h2>
+            <p className="mt-1 text-sm text-muted">
+              Illustrative sample CI runs, not measured provider bills or live
+              verification. No CI connection or API key is required.
+            </p>
+            {onNewProject && (
+              <button
+                onClick={onNewProject}
+                className="mt-3 text-sm font-medium text-accent"
+              >
+                Create your own CI agent
+              </button>
+            )}
           </section>
         )}
         {projectsError && (
-          <div className="card border-risk/40 text-sm text-risk">{projectsError}</div>
+          <div className="card border-risk/40 text-sm text-risk">
+            {projectsError}
+          </div>
         )}
         {noProjects && (
           <div className="card text-sm text-muted">
-            No CI-Agents yet. Create one from a recommendation to start tracking savings.
+            No CI agents yet. Set up a CI agent to track usage and task results.
           </div>
         )}
 
         {projectId != null && (
-          <div className={`grid grid-cols-1 gap-5 ${chatEnabled ? "xl:grid-cols-[minmax(0,1fr)_380px]" : ""}`}>
-            {/* left: savings dashboard */}
+          <div
+            className={`grid grid-cols-1 gap-5 ${chatEnabled ? "xl:grid-cols-[minmax(0,1fr)_380px]" : ""}`}
+          >
+            {/* Reported-run usage and task results */}
             <div className="flex flex-col gap-5">
               {error && (
-                <div className="card border-risk/40 text-sm text-risk">{error}</div>
+                <div className="card border-risk/40 text-sm text-risk">
+                  {error}
+                </div>
               )}
               {loading && !data && (
-                <p className="text-sm text-muted">Loading savings…</p>
+                <p className="text-sm text-muted">Loading usage…</p>
               )}
 
-              {data && k && pickIsBaseline && (
+              {data && (
                 <>
-                  {/* the pick is the baseline: raw stats only, no "saved" figure */}
-                  <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                    <KpiCard
-                      label="Running the baseline"
-                      value={data.selectedModel ?? "—"}
-                      sub="nothing to compare against — no savings to bank"
-                    />
-                    <KpiCard
-                      label="Spend this period"
-                      value={formatUSD(k.spendThisPeriod)}
-                      sub={
-                        k.projectedMonthlySpend != null
-                          ? `~${formatUSD(k.projectedMonthlySpend)}/mo projected`
-                          : "projection needs more history"
-                      }
-                    />
-                    <KpiCard
-                      label="Quality"
-                      value={formatPctFromRate(k.acceptanceRate)}
-                      accent={
-                        k.qualityStatus === "banking"
-                          ? "text-banked"
-                          : k.qualityStatus === "quality_risk"
-                            ? "text-risk"
-                            : "text-unrated"
-                      }
-                      sub={`acceptance · threshold ${formatPctFromRate(k.threshold)}`}
-                    />
-                    <KpiCard label="CI runs" value={String(k.runsCount)} sub={taskLabel} />
-                  </section>
-
-                  <section className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-                    <CostPerRunBar series={data.series} />
-                    <QualityTrend series={data.series} threshold={k.threshold} />
-                  </section>
-
-                  <RunsTable
+                  <UsagePanel
+                    key={projectId}
+                    data={data}
                     projectId={projectId}
-                    runs={data.runs}
                     onRated={handleRated}
                   />
-                </>
-              )}
-
-              {data && k && !pickIsBaseline && (
-                <>
-                  {/* KPI: the savings hero + a compact stat strip (F2) */}
-                  <section className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(26rem,1fr)_minmax(0,1.6fr)]">
-                    <SavingsHero
-                      label={
-                        toNumber(k.cumulativeSaved) < 0
-                          ? "Net overspend"
-                          : "Cumulative saved"
-                      }
-                      value={formatUSD(k.cumulativeSaved)}
-                      accent={
-                        toNumber(k.cumulativeSaved) < 0 ? "text-risk" : "text-banked"
-                      }
-                      vsBaseline={
-                        <>
-                          {k.savedPct != null ? `${formatPct(k.savedPct)} vs baseline` : "—"}
-                          {data.baselineModel && (
-                            <span className="text-muted">
-                              {" · "}
-                              {data.baselineModel} costed, not run
-                            </span>
-                          )}
-                        </>
-                      }
-                      split={
-                        <>
-                          {k.bankedRuns} {k.bankedRuns === 1 ? "run" : "runs"} counted toward savings
-                          {k.qualityRiskRuns > 0 && (
-                            <>
-                              {" · "}
-                              <span className="text-risk">
-                                {k.qualityRiskRuns} quality-risk (
-                                {formatUSD(k.qualityRisk)} excluded)
-                              </span>
-                            </>
-                          )}
-                          {k.unratedRuns > 0 && (
-                            <>
-                              {" · "}
-                              <span className="text-unrated">{k.unratedRuns} unrated</span>
-                            </>
-                          )}
-                        </>
-                      }
-                    />
-
-                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-                      <KpiCard
-                        label="Spend this period"
-                        value={formatUSD(k.spendThisPeriod)}
-                        sub={
-                          k.projectedMonthlySpend != null
-                            ? `~${formatUSD(k.projectedMonthlySpend)}/mo projected`
-                            : "projection needs more history"
-                        }
-                      />
-                      <KpiCard
-                        label="Quality"
-                        value={formatPctFromRate(k.acceptanceRate)}
-                        accent={
-                          k.qualityStatus === "banking"
-                            ? "text-banked"
-                            : k.qualityStatus === "quality_risk"
-                              ? "text-risk"
-                              : "text-unrated"
-                        }
-                        sub={`acceptance · threshold ${formatPctFromRate(k.threshold)}`}
-                      />
-                      <KpiCard
-                        label="CI runs"
-                        value={String(k.runsCount)}
-                        sub={`${taskLabel} · ${data.selectedModel ?? "—"}`}
-                      />
-                    </div>
-                  </section>
-
-                  {/* main chart */}
-                  <SavingsAreaChart
-                    series={data.series}
-                    selectedModel={data.selectedModel}
-                    baselineModel={data.baselineModel}
-                  />
-
-                  {/* secondary charts */}
-                  <section className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-                    <CostPerRunBar series={data.series} />
-                    <QualityTrend series={data.series} threshold={k.threshold} />
-                  </section>
-
-                  <RunsTable
-                    projectId={projectId}
-                    runs={data.runs}
-                    onRated={handleRated}
-                  />
+                  <nav aria-label="Run pages" className="flex gap-4 text-sm">
+                    <button
+                      disabled={offset === 0 || loading}
+                      onClick={() => setOffset(Math.max(0, offset - 100))}
+                    >
+                      Previous runs
+                    </button>
+                    <span>
+                      {data.total === 0 ? 0 : data.offset + 1}–
+                      {Math.min(data.offset + data.runs.length, data.total)} of{" "}
+                      {data.total}
+                    </span>
+                    <button
+                      disabled={offset + 100 >= data.total || loading}
+                      onClick={() => setOffset(offset + 100)}
+                    >
+                      More runs
+                    </button>
+                  </nav>
                 </>
               )}
             </div>
 
             {/* right: grounded chat panel (stacks under the dashboard below xl) */}
-            {chatEnabled && <div className="h-[560px] xl:sticky xl:top-[4.75rem] xl:h-[calc(100vh-6rem)]">
-              <ChatPanel projectId={projectId} onUnauthorized={handleUnauthorized} onForbidden={handleChatForbidden} />
-            </div>}
+            {chatEnabled && (
+              <div className="h-[560px] xl:sticky xl:top-[4.75rem] xl:h-[calc(100vh-6rem)]">
+                <ChatPanel
+                  projectId={projectId}
+                  onUnauthorized={handleUnauthorized}
+                  onForbidden={handleChatForbidden}
+                />
+              </div>
+            )}
           </div>
         )}
       </main>
@@ -428,16 +345,22 @@ function Header({
               onChange={onProject}
             />
           )}
-          {activeProject?.isExample && <span className="rounded border border-accent/30 px-2 py-1 text-xs text-accent">Example</span>}
-          {activeProject && !activeProject.isExample && !activeProject.setupComplete && (
-            <span
-              className="inline-flex items-center gap-1 rounded border border-unrated/40 bg-unrated/10 px-2 py-1 text-xs font-medium text-unrated"
-              title="No CI ingest token yet. Finish setup via Edit Jenkins, then add the CI stage."
-            >
-              <AlertTriangle size={12} />
-              Setup incomplete
+          {activeProject?.isExample && (
+            <span className="rounded border border-accent/30 px-2 py-1 text-xs text-accent">
+              Example
             </span>
           )}
+          {activeProject &&
+            !activeProject.isExample &&
+            !activeProject.setupComplete && (
+              <span
+                className="inline-flex items-center gap-1 rounded border border-unrated/40 bg-unrated/10 px-2 py-1 text-xs font-medium text-unrated"
+                title="No CI ingest token yet. Finish setup via Edit Jenkins, then add the CI stage."
+              >
+                <AlertTriangle size={12} />
+                Setup incomplete
+              </span>
+            )}
           {activeProject && (
             <ProjectActions
               project={activeProject}
@@ -456,15 +379,16 @@ function Header({
             </button>
           )}
           {onNewProject && (
-            <button
-              onClick={onNewProject}
-              className="compact-action"
-            >
+            <button onClick={onNewProject} className="compact-action">
               <Plus size={13} />
               Set up a CI agent
             </button>
           )}
-          <div className="flex items-center rounded-xl border border-border bg-panel p-1" role="group" aria-label="Date range">
+          <div
+            className="flex items-center rounded-xl border border-border bg-panel p-1"
+            role="group"
+            aria-label="Date range"
+          >
             {RANGES.map((r) => (
               <button
                 key={r}

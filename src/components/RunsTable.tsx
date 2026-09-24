@@ -230,7 +230,7 @@ function TokenUsage({ label, value }: { label: string; value: number | null }) {
 // the quality signal: accept = a real, useful catch; reject = noise. The chosen verdict
 // is highlighted (green accept / red reject); a failed submit shows inline and leaves the
 // prior verdict intact. `submitting` holds the in-flight verdict so only that button spins.
-function FindingItem({
+export function FindingItem({
   finding,
   onRate,
 }: {

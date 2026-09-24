@@ -1,9 +1,10 @@
+import { usageFixture } from "../usage/fixtures";
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { expect, it, vi } from "vitest";
 import { http, HttpResponse } from "msw";
 import { server } from "./msw.setup";
 import { Dashboard } from "../pages/Dashboard";
-import { projectsFixture, savingsFixture, securitySavingsFixture } from "../test/fixtures";
+import { projectsFixture } from "../test/fixtures";
 
 it("shows labelled sample dashboards without setup prompts and lets visitors switch examples", async () => {
   const base = "http://localhost:8000";
@@ -15,7 +16,7 @@ it("shows labelled sample dashboards without setup prompts and lets visitors swi
   server.use(
     http.get(`${base}/auth/me`, () => HttpResponse.json({ id: 7, email: "visitor@example.com", chatEnabled: false })),
     http.get(`${base}/projects`, () => HttpResponse.json(examples)),
-    http.get(`${base}/projects/:id/savings`, ({ params }) => HttpResponse.json(params.id === "92" ? securitySavingsFixture : savingsFixture)),
+    http.get(`${base}/projects/:id/usage/v1`, () => HttpResponse.json(usageFixture)),
     http.get(`${base}/projects/:id/chat`, () => { chatRequests++; return HttpResponse.json({ messages: [] }); }),
   );
   const create = vi.fn();
@@ -23,7 +24,7 @@ it("shows labelled sample dashboards without setup prompts and lets visitors swi
   const notice = await screen.findByRole("region", { name: "Example project" });
   expect(within(notice).getByText("Example: Pull Request Review")).toBeInTheDocument();
   expect(within(notice).getByText(/sample CI runs/)).toBeInTheDocument();
-  await screen.findByText("Cumulative saved");
+  await screen.findByText("Usage and estimated cost");
   expect(screen.queryByText("Setup incomplete")).not.toBeInTheDocument();
   fireEvent.click(screen.getByRole("button", { name: "CI-Agent actions" }));
   expect(screen.queryByText("Edit Jenkins")).not.toBeInTheDocument();
