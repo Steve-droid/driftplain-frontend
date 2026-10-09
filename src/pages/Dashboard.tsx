@@ -1,10 +1,10 @@
-import { BRAND_NAME } from "../lib/brand";
 import { useCallback, useEffect, useState } from "react";
-import { AlertTriangle, House, Plus } from "lucide-react";
+import { AlertTriangle, House, Plus, RefreshCw } from "lucide-react";
 import type { SavingsRange } from "../types/savings";
 import type { Project } from "../types/project";
 import { apiGet } from "../api/client";
 import type { UsageResponse } from "../usage/types";
+import { exampleUsage } from "../usage/examples";
 import { UsagePanel } from "../usage/UsagePanel";
 import { listProjects } from "../api/projects";
 import { ApiError } from "../api/client";
@@ -12,7 +12,7 @@ import { getMe } from "../api/auth";
 import { ProjectActions } from "../components/ProjectActions";
 import { ProjectSwitcher } from "../components/ProjectSwitcher";
 import { ChatPanel } from "../components/ChatPanel";
-import markUrl from "../assets/brand/driftplain-mark.svg";
+import { AppHeader } from "../components/AppHeader";
 
 const RANGES: SavingsRange[] = ["all", "30d", "7d"];
 
@@ -135,12 +135,21 @@ export function Dashboard({
     window.history.replaceState(window.history.state, "", url);
   }, [projectId]);
 
+  const activeProject = projects?.find((p) => p.id === projectId) ?? null;
+  const exampleTask = activeProject?.isExample === true ? activeProject.taskType : null;
+
+  // Examples are display-only fixtures; real projects always use the owner API.
   // Load reported-run usage for the active project, range and page.
   useEffect(() => {
     if (projectId == null) return;
     let live = true;
     setLoading(true);
     setError(null);
+    if (exampleTask !== null) {
+      setData(exampleUsage({ id: projectId, isExample: true, taskType: exampleTask }, range, offset));
+      setLoading(false);
+      return;
+    }
     apiGet<UsageResponse>(
       `/projects/${projectId}/usage/v1?range=${range}&offset=${offset}`,
     )
@@ -155,10 +164,9 @@ export function Dashboard({
     return () => {
       live = false;
     };
-  }, [projectId, range, offset, refreshNonce, handleUnauthorized]);
+  }, [projectId, exampleTask, range, offset, refreshNonce, handleUnauthorized]);
 
   const noProjects = projects !== null && projects.length === 0;
-  const activeProject = projects?.find((p) => p.id === projectId) ?? null;
 
   // Refresh project names/setup and reported results after edits.
   const handleChanged = useCallback(() => {
@@ -193,26 +201,29 @@ export function Dashboard({
         onChanged={handleChanged}
         onDeleted={handleDeleted}
         onUnauthorized={handleUnauthorized}
+        loading={loading && projectId != null}
+        onRefresh={() => { void loadProjects(); setRefreshNonce((n) => n + 1); }}
         range={range}
         onRange={(r) => {
+          if (r === range) return;
           setOffset(0);
           setData(null);
           setRange(r);
         }}
       />
 
-      <main className="mx-auto max-w-[1600px] px-4 py-7 sm:px-6">
+      <main className="page-shell" style={{ paddingTop: 24 }}>
         {activeProject?.isExample && (
           <section
-            className="mb-5 rounded-xl border border-accent/30 bg-accent/5 p-4"
+            className="mb-5 rounded-xl border border-accent/20 bg-accent/5 px-4 py-3"
             aria-label="Example project"
           >
             <h2 className="text-sm font-semibold text-fg">
               {activeProject.name}
             </h2>
             <p className="mt-1 text-sm text-muted">
-              Illustrative sample CI runs, not measured provider bills or live
-              verification. No CI connection or API key is required.
+              Illustrative sample CI runs with mock models, usage, costs and findings.
+              No CI connection or API key is required. No real provider charges.
             </p>
             {onNewProject && (
               <button
@@ -225,7 +236,7 @@ export function Dashboard({
           </section>
         )}
         {projectsError && (
-          <div className="card border-risk/40 text-sm text-risk">
+          <div role="alert" className="card border-risk/40 text-sm text-risk">
             {projectsError}
           </div>
         )}
@@ -237,17 +248,21 @@ export function Dashboard({
 
         {projectId != null && (
           <div
-            className={`grid grid-cols-1 gap-5 ${chatEnabled ? "xl:grid-cols-[minmax(0,1fr)_380px]" : ""}`}
+            className={`grid grid-cols-1 gap-5 ${chatEnabled && exampleTask === null ? "xl:grid-cols-[minmax(0,1fr)_380px]" : ""}`}
           >
             {/* Reported-run usage and task results */}
-            <div className="flex flex-col gap-5">
+            <div className="dashboard-content flex flex-col gap-5">
               {error && (
-                <div className="card border-risk/40 text-sm text-risk">
-                  {error}
+                <div role="alert" className="card flex flex-wrap items-center justify-between gap-3 border-risk/40 text-sm text-risk">
+                  <span>{error}</span>
+                  <button className="compact-action" onClick={() => setRefreshNonce((n) => n + 1)}>Try again</button>
                 </div>
               )}
               {loading && !data && (
-                <p className="text-sm text-muted">Loading usage…</p>
+                <div role="status">
+                  <p className="mb-4 text-sm text-muted">Loading usage…</p>
+                  <div className="dashboard-loading" aria-hidden>{Array.from({ length: 5 }, (_, i) => <span key={i} />)}</div>
+                </div>
               )}
 
               {data && (
@@ -255,11 +270,13 @@ export function Dashboard({
                   <UsagePanel
                     key={projectId}
                     data={data}
+                    example={exampleTask !== null}
                     projectId={projectId}
                     onRated={handleRated}
                   />
-                  <nav aria-label="Run pages" className="flex gap-4 text-sm">
+                  <nav aria-label="Run pages" className="flex flex-wrap items-center justify-between gap-3 text-sm text-muted">
                     <button
+                      className="compact-action"
                       disabled={offset === 0 || loading}
                       onClick={() => setOffset(Math.max(0, offset - 100))}
                     >
@@ -271,6 +288,7 @@ export function Dashboard({
                       {data.total}
                     </span>
                     <button
+                      className="compact-action"
                       disabled={offset + 100 >= data.total || loading}
                       onClick={() => setOffset(offset + 100)}
                     >
@@ -282,7 +300,7 @@ export function Dashboard({
             </div>
 
             {/* right: grounded chat panel (stacks under the dashboard below xl) */}
-            {chatEnabled && (
+            {chatEnabled && exampleTask === null && (
               <div className="h-[560px] xl:sticky xl:top-[4.75rem] xl:h-[calc(100vh-6rem)]">
                 <ChatPanel
                   projectId={projectId}
@@ -310,6 +328,8 @@ function Header({
   onUnauthorized,
   range,
   onRange,
+  loading,
+  onRefresh,
 }: {
   projects: Project[];
   projectId: number | null;
@@ -320,92 +340,83 @@ function Header({
   onChanged: () => void;
   onDeleted: (deletedId: number) => void;
   onUnauthorized?: () => void;
+  loading: boolean;
+  onRefresh: () => void;
   range: SavingsRange;
   onRange: (r: SavingsRange) => void;
 }) {
   return (
-    <header className="workspace-header sticky top-0 z-10 border-b border-border">
-      <div className="mx-auto flex max-w-[1600px] flex-wrap items-center justify-between gap-4 px-4 py-4 sm:px-6">
-        <div className="flex min-w-0 flex-wrap items-center gap-3">
-          <button
-            onClick={onHome}
-            disabled={!onHome}
-            aria-label="Home"
-            className="flex items-center gap-2.5 rounded-lg transition-opacity hover:opacity-80 disabled:cursor-default disabled:hover:opacity-100"
-          >
-            <span className="flex h-7 w-7 items-center justify-center rounded-md border border-border bg-panel">
-              <img src={markUrl} alt={BRAND_NAME} className="h-4 w-4" />
-            </span>
-            <span className="font-semibold tracking-tight">{BRAND_NAME}</span>
-          </button>
-          {projectId != null && projects.length > 0 && (
-            <ProjectSwitcher
-              projects={projects}
-              value={projectId}
-              onChange={onProject}
-            />
-          )}
-          {activeProject?.isExample && (
-            <span className="rounded border border-accent/30 px-2 py-1 text-xs text-accent">
-              Example
-            </span>
-          )}
-          {activeProject &&
-            !activeProject.isExample &&
-            !activeProject.setupComplete && (
-              <span
-                className="inline-flex items-center gap-1 rounded border border-unrated/40 bg-unrated/10 px-2 py-1 text-xs font-medium text-unrated"
-                title="No CI ingest token yet. Finish setup via Edit Jenkins, then add the CI stage."
-              >
-                <AlertTriangle size={12} />
-                Setup incomplete
-              </span>
+    <>
+      <AppHeader
+        current="projects"
+        onNavigate={{ home: onHome, setup: onNewProject, projects: () => {} }}
+      />
+      <div className="page-shell" style={{ paddingBottom: 0 }}>
+        <div className="page-toolbar" style={{ marginBottom: 0 }}>
+          <div className="flex min-w-0 flex-wrap items-center gap-3">
+            <span className="sr-only">My Projects</span>
+            {projectId != null && projects.length > 0 && (
+              <ProjectSwitcher
+                projects={projects}
+                value={projectId}
+                onChange={onProject}
+              />
             )}
-          {activeProject && (
-            <ProjectActions
-              project={activeProject}
-              onChanged={onChanged}
-              onDeleted={onDeleted}
-              onUnauthorized={onUnauthorized}
-            />
-          )}
-        </div>
+            {activeProject?.isExample && (
+              <span className="status-pill border-accent/30 text-accent">Example</span>
+            )}
+            {activeProject &&
+              !activeProject.isExample &&
+              !activeProject.setupComplete && (
+                <span
+                  className="status-pill border-unrated/40 bg-unrated/10 text-unrated"
+                  title="No CI ingest token yet. Finish setup via Edit Jenkins, then add the CI stage."
+                >
+                  <AlertTriangle size={12} />
+                  Setup incomplete
+                </span>
+              )}
+            {activeProject && (
+              <ProjectActions
+                project={activeProject}
+                onChanged={onChanged}
+                onDeleted={onDeleted}
+                onUnauthorized={onUnauthorized}
+              />
+            )}
+          </div>
 
-        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-          {onHome && (
-            <button type="button" onClick={onHome} className="compact-action">
-              <House size={13} />
-              Back to home
-            </button>
-          )}
-          {onNewProject && (
-            <button onClick={onNewProject} className="compact-action">
-              <Plus size={13} />
-              Set up a CI agent
-            </button>
-          )}
-          <div
-            className="flex items-center rounded-xl border border-border bg-panel p-1"
-            role="group"
-            aria-label="Date range"
-          >
-            {RANGES.map((r) => (
-              <button
-                key={r}
-                onClick={() => onRange(r)}
-                aria-pressed={range === r}
-                className={`rounded-lg px-2.5 py-1.5 text-xs font-medium transition-colors ${
-                  range === r
-                    ? "bg-panel-2 text-fg"
-                    : "text-muted hover:text-fg"
-                }`}
-              >
-                {r === "all" ? "All" : r}
+          <div className="flex flex-wrap items-center gap-2">
+            {onHome && (
+              <button type="button" onClick={onHome} className="compact-action">
+                <House size={13} />
+                Back to home
               </button>
-            ))}
+            )}
+            {onNewProject && (
+              <button onClick={onNewProject} className="compact-action">
+                <Plus size={13} />
+                Set up a CI agent
+              </button>
+            )}
+            <button className="compact-action" onClick={onRefresh} disabled={loading} aria-label="Refresh dashboard">
+              <RefreshCw size={14} aria-hidden />
+              Refresh
+            </button>
+            <div className="segmented" role="group" aria-label="Date range">
+              {RANGES.map((r) => (
+                <button
+                  key={r}
+                  onClick={() => onRange(r)}
+                  aria-pressed={range === r}
+                >
+                  {r === "all" ? "All time" : r === "30d" ? "30 days" : "7 days"}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
       </div>
-    </header>
+    </>
   );
 }

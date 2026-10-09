@@ -67,7 +67,7 @@ describe("App routing", () => {
     render(<App />);
 
     fireEvent.click((await screen.findAllByRole("button", { name: /set up a ci agent/i }))[0]);
-    expect(await screen.findByRole("heading", { name: "Choose a task. Pick an exact model." })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Set up a CI agent" })).toBeInTheDocument();
   });
 
   it("the dashboard logo returns to the home hub", async () => {
@@ -79,7 +79,7 @@ describe("App routing", () => {
 
     fireEvent.click((await screen.findAllByRole("button", { name: /view my ci agents/i }))[0]);
     await screen.findByLabelText("Select CI-Agent");
-    fireEvent.click(screen.getByRole("button", { name: /^home$/i }));
+    fireEvent.click(screen.getByRole("link", { name: "Driftplain home" }));
     expect(await screen.findByRole("heading", { name: VALUE_PROP.headline })).toBeInTheDocument();
   });
 
@@ -204,7 +204,7 @@ describe("Navigation transitions", () => {
     fireEvent.click(screen.getAllByRole("button", { name: /view my ci agents/i })[0]);
     fireEvent.click(screen.getAllByRole("button", { name: /set up a ci agent/i })[0]);
     act(() => { for (const update of updates) update(); });
-    expect(screen.getByRole("heading", { name: "Choose a task. Pick an exact model." })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Set up a CI agent" })).toBeInTheDocument();
     expect(window.location.pathname).toBe("/setup");
     expect(getSavings).not.toHaveBeenCalled();
   });
@@ -215,7 +215,7 @@ describe("Navigation transitions", () => {
     vi.mocked(listProjects).mockResolvedValue(projectsFixture);
     render(<App />);
     fireEvent.click((await screen.findAllByRole("button", { name: /set up a ci agent/i }))[0]);
-    expect(screen.getByRole("heading", { name: "Choose a task. Pick an exact model." })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Set up a CI agent" })).toBeInTheDocument();
     expect(start).not.toHaveBeenCalled();
   });
 
@@ -230,4 +230,13 @@ describe("Navigation transitions", () => {
     expect(await screen.findByRole("region", { name: "Home" })).toBeInTheDocument();
     expect(window.history.state.mmPhase).toBe("home");
   });
+});
+
+
+it("opens a fresh project deep link directly on its dashboard", async () => {
+  window.history.replaceState(null, "", "/?project=2");
+  setToken("jwt");
+  vi.mocked(listProjects).mockResolvedValue(projectsFixture);
+  render(<App />);
+  expect(await screen.findByLabelText("Select CI-Agent")).toHaveValue("2");
 });

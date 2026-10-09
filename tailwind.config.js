@@ -1,25 +1,27 @@
 /** @type {import('tailwindcss').Config} */
-// Driftplain theme (P38): the Grafana-style palette — desaturated status trio, one
-// blue accent, flat dark surfaces — applied app-wide. Monospace for money, tokens, ids.
+// Driftplain theme: one neutral dark surface scale, one blue accent, a steel-cyan brand
+// signal and a desaturated status trio, applied app-wide. Monospace for money, tokens, ids.
 //
-// Shared workspace surfaces and card geometry live in src/index.css.
+// src/index.css mirrors these values as CSS variables for plain-CSS modules and holds
+// the shared primitives (buttons, fields, cards, tables, tabs).
 export default {
   content: ["./index.html", "./src/**/*.{ts,tsx}"],
   theme: {
     extend: {
       colors: {
-        canvas: "#111217", // page background
-        panel: "#181b1f", // panel surface
-        "panel-2": "#22252b", // inset surface (inputs, insets) — no nested cards
-        border: "#2c3235",
-        fg: "#ccccdc", // primary text
-        muted: "#9fa7b3", // secondary text
-        faint: "#6e7680", // tertiary / axis text
-        banked: "#73bf69", // green  — banked savings / passing quality
-        unrated: "#ff9830", // orange — unrated / pending review
-        risk: "#f2495c", // red    — quality risk / failed gate
-        accent: "#5794f2", // Grafana blue — the primary action accent
-        signal: "#5b93a8", // steel-cyan — model / CI motifs on the home hub only
+        canvas: "#0b0d10", // page background
+        panel: "#121418", // card / panel surface
+        "panel-2": "#191c21", // raised or inset surface (inputs, table heads) — no nested cards
+        border: "#252a31",
+        "border-strong": "#343a43", // hover / focus-adjacent borders
+        fg: "#d9dde4", // primary text
+        muted: "#9aa3af", // secondary text
+        faint: "#6c7580", // tertiary / axis text
+        banked: "#4cc38a", // green  — passing / accepted
+        unrated: "#f5a524", // amber  — unrated / pending review
+        risk: "#f0555f", // red    — failed / risk
+        accent: "#4f8ff7", // the single primary action accent
+        signal: "#5fb4cc", // steel-cyan — brand signal (eyebrows, CI motifs)
       },
       fontFamily: {
         sans: ["Inter", "ui-sans-serif", "system-ui", "sans-serif"],

@@ -72,14 +72,15 @@ test("anonymous navigation, compare reload/back, and honest chart scopes", async
   await expect(
     page.getByRole("columnheader", { name: "Alpha 1", exact: true }),
   ).toBeVisible();
+  const chart = page.getByRole("region", { name: "Comparable measurement chart" });
+  await expect(chart).toBeVisible();
+  await expect(chart.getByText("91.3%").first()).toBeVisible();
+  await expect(chart.getByText("80%").first()).toBeVisible();
   await page.getByRole("button", { name: "Chart this scope" }).click();
-  await expect(
-    page.getByRole("region", { name: "Comparable measurement chart" }),
-  ).toBeVisible();
+  await expect(page).toHaveURL(/chart=/);
   await page.goBack();
-  await expect(
-    page.getByRole("region", { name: "Comparable measurement chart" }),
-  ).toHaveCount(0);
+  await expect(page).not.toHaveURL(/chart=/);
+  await expect(chart).toBeVisible();
   expect(privateCalls).toEqual([]);
 });
 test("explanations support focus, Escape, touch, and narrow layouts", async ({
@@ -133,7 +134,7 @@ test("server alias search is keyboard navigable and profile deep links survive r
   await expect(page.getByRole("link", { name: "Use in CI", exact: true })).toHaveAttribute("href", "/setup?model=2");
 });
 
-test("long frozen revisions fit the mobile cards", async ({ page }) => {
+test("long frozen revisions fit the mobile rows", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.route("**/catalog/v1/benchmarks?*", (route) =>
     route.fulfill({
@@ -144,7 +145,7 @@ test("long frozen revisions fit the mobile cards", async ({ page }) => {
   );
   await page.goto("/benchmarks");
   await expect(
-    page.getByRole("heading", { name: /^GPQA Diamond/ }),
+    page.getByRole("link", { name: "GPQA Diamond", exact: true }),
   ).toBeVisible();
   expect(
     await page.evaluate(
@@ -166,7 +167,7 @@ for (const destination of ["/setup", "/projects"]) {
     await page.getByRole("button", { name: "Sign in" }).click();
     if (destination === "/setup")
       await expect(
-        page.getByRole("heading", { name: "Choose a task. Pick an exact model.", exact: true }),
+        page.getByRole("heading", { name: "Set up a CI agent", exact: true }),
       ).toBeVisible();
     else
       await expect(

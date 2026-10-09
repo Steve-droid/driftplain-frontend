@@ -6,6 +6,14 @@ import {
   page as envelope,
 } from "../src/catalog/fixtures";
 import type { Candidate, Profile, ProjectInput } from "../src/execution/api";
+// Task card labels, mirrored here because src/execution/draft imports browser-only config.
+const taskNames: Record<Profile["task"], string> = {
+  ci_review: "PR review",
+  security_analysis: "Security analysis",
+  test_generation: "Test generation",
+  ci_failure_diagnosis: "CI failure diagnosis",
+  other: "Custom task",
+};
 const row: Candidate = {
   runtimeId: 1,
   catalogModelId: 1,
@@ -204,7 +212,7 @@ async function fixtures(page: Page, signedIn = true) {
   return state;
 }
 async function pick(page: Page, task: Profile["task"]) {
-  await page.getByLabel("Task", { exact: true }).selectOption(task);
+  await page.getByRole("radio", { name: taskNames[task] }).check();
   await page.getByLabel("Search these models").fill("Alpha");
   await page.getByRole("button", { name: /Choose Alpha 1/ }).click();
   await page.getByLabel("Project name").fill("Named setup");
@@ -277,9 +285,9 @@ test("anonymous exact evidence return, benchmark explanation, draft and back nav
   await page.getByRole("link", { name: "Inspect the full Explorer" }).click();
   await page.getByRole("link", { name: "Return to CI setup" }).click();
   await expect(page.getByLabel("Project name")).toHaveValue("Named setup");
-  await expect(page.getByLabel("Task", { exact: true })).toHaveValue(
-    "ci_review",
-  );
+  await expect(
+    page.getByRole("radio", { name: taskNames.ci_review }),
+  ).toBeChecked();
   await page.goBack();
   await expect(page).toHaveURL(/benchmarks/);
   await page.goForward();
@@ -351,7 +359,7 @@ test("profile changes, disabled selection, exact variant, editing and partial sa
     ),
   ).toBe(true);
   await page.goto("/setup?model=99");
-  await page.getByLabel("Task", { exact: true }).selectOption("ci_review");
+  await page.getByRole("radio", { name: taskNames["ci_review"] }).check();
   await expect(
     page.getByText(/Requested exact model has no eligible choice/),
   ).toBeVisible();
@@ -406,7 +414,7 @@ for (const mode of ["single_call", "opencode"] as const) {
   }, testInfo) => {
     const state = await fixtures(page);
     await page.goto("/setup?model=1&evidence=1");
-    await page.getByLabel("Task", { exact: true }).selectOption("other");
+    await page.getByRole("radio", { name: taskNames["other"] }).check();
     await page.getByLabel("Execution mode").selectOption(mode);
     await page.getByLabel("Editable starter template").selectOption("docs");
     await page
@@ -531,7 +539,7 @@ test("legacy transition to Other uses explicit mode and keyboard selection", asy
   await expect(page.getByLabel("Project name")).toHaveValue(
     "Legacy custom transition",
   );
-  await page.getByLabel("Task", { exact: true }).selectOption("other");
+  await page.getByRole("radio", { name: taskNames["other"] }).check();
   await page.getByLabel("Execution mode").selectOption("opencode");
   await expect(page.getByLabel("Execution mode")).toHaveValue("opencode");
   await page.getByLabel("Editable starter template").selectOption("docs");

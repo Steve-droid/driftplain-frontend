@@ -35,7 +35,7 @@ describe("anonymous catalog", () => {
     setToken("expired-token");
     render(<App />);
     expect(
-      await screen.findByRole("heading", { name: /GPQA Diamond/ }),
+      await screen.findByRole("link", { name: "GPQA Diamond" }),
     ).toBeInTheDocument();
     expect(listProjects).not.toHaveBeenCalled();
   });

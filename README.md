@@ -140,8 +140,11 @@ All are local/fake. Publication does not deploy the explorer or import productio
 
 ### Usage and task results (B15)
 
-The dashboard shows selected-model estimates with separate complete, partial, unavailable
-and legacy coverage, plus accepted/rejected and rated/total feedback. Run cards retain the
-executed revision and distinguish reports, proposed patches, generated-test evidence and
-diagnosis from findings. Historical input/output amounts remain explicitly limited and
-outside new totals. See [the dashboard contract](src/usage/CONTRACT.md).
+The dashboard opens with four KPI cards (complete estimates, partial known charges, cost
+coverage, feedback coverage), a cost-per-run bar chart coloured by billing coverage, and
+tokens-per-run and findings-feedback breakdown charts. Below them a runs table lists every
+reported run; opening a row shows the executed revision and distinguishes reports, proposed
+patches, generated-test evidence and diagnosis from findings. Unavailable and legacy costs
+are omitted from charts rather than drawn as zero, and historical input/output amounts
+remain explicitly limited and outside new totals. See
+[the dashboard contract](src/usage/CONTRACT.md).

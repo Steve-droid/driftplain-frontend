@@ -19,10 +19,11 @@ export function AuthLayout({ children }: { children: ReactNode }) {
         <div className="auth-message relative z-10">
           <p className="text-balance text-4xl font-semibold leading-[1.12] tracking-[-0.045em] text-gray-50 lg:text-6xl">
             Explore evidence.<br />{" "}
-            <span className="text-signal">Choose your model.</span>
+            <span className="text-signal">Choose a task and model.</span><br />{" "}
+            Run it in your CI.
           </p>
           <p className="mt-6 max-w-sm text-base leading-relaxed text-muted">
-            Explore benchmark evidence, choose a model for CI, and track usage and results.
+            Compare published benchmarks, configure your agent, and track usage and results.
           </p>
           <div className="mt-10 flex items-center gap-3 text-xs text-muted">
             <span className="h-px w-8 bg-signal/60" />

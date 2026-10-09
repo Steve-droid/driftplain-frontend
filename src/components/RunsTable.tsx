@@ -233,15 +233,17 @@ function TokenUsage({ label, value }: { label: string; value: number | null }) {
 export function FindingItem({
   finding,
   onRate,
+  readOnly = false,
 }: {
   finding: FindingRow;
+  readOnly?: boolean;
   onRate: (findingId: number, verdict: Verdict) => Promise<void>;
 }) {
   const [submitting, setSubmitting] = useState<Verdict | null>(null);
   const [error, setError] = useState(false);
 
   async function rate(verdict: Verdict) {
-    if (submitting) return; // ignore clicks while a verdict is in flight
+    if (readOnly || submitting) return; // ignore clicks while a verdict is in flight
     setSubmitting(verdict);
     setError(false);
     try {
@@ -254,7 +256,7 @@ export function FindingItem({
   }
 
   return (
-    <li className="flex items-start gap-2 text-xs text-muted">
+    <li className="flex flex-wrap items-start gap-2 text-xs text-muted">
       <span className="num shrink-0 text-faint">
         {finding.category ?? "—"}/{finding.severity ?? "—"}
       </span>
@@ -272,6 +274,7 @@ export function FindingItem({
       )}
       <span className="text-muted">{finding.message}</span>
       <div className="ml-auto flex shrink-0 items-center gap-1.5">
+        {readOnly ? <span className="text-faint">Sample · {finding.verdict === "accept" ? "accepted" : finding.verdict === "reject" ? "rejected" : "unrated"}</span> : <>
         {error && <span className="text-risk">couldn’t save</span>}
         <VerdictButton
           label="Accept finding"
@@ -289,6 +292,7 @@ export function FindingItem({
           onClick={() => rate("reject")}
           disabled={submitting != null}
         />
+        </>}
       </div>
     </li>
   );

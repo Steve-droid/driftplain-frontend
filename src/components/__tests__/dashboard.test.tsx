@@ -295,7 +295,8 @@ describe("Dashboard (E20: task label, baseline pick)", () => {
     vi.mocked(getChatHistory).mockResolvedValue(chatHistoryFixture);
     const { Dashboard } = await import("../../pages/Dashboard");
     render(<Dashboard />);
-    expect(await screen.findByText(/aborted-13 · security analysis/)).toBeInTheDocument();
+    const row = (await screen.findByRole("button", { name: "aborted-13" })).closest("tr")!;
+    expect(row).toHaveTextContent("security analysis");
   });
 
   it("shows raw stats and no 'saved' figure when the pick IS the baseline", async () => {
