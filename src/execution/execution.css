@@ -168,6 +168,12 @@
 .ci-evidence p {
   margin: 2px 0;
 }
+.ci-more {
+  margin-top: 10px;
+}
+.ci-more-result button {
+  margin-top: 6px;
+}
 .ci-actions {
   display: flex;
   align-items: center;

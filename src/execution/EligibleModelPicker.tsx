@@ -51,11 +51,16 @@ export function CandidateEvidence({ item }: { item: Candidate }) {
   );
 }
 const hints: Record<Profile["task"], string> = {
-  other: "Any model verified for this mode. No benchmark is matched to a custom task.",
-  ci_review: "Ranked by CodeReviewBench F1 when the evidence is directly comparable.",
-  security_analysis: "Verified models only; no comparable ranking exists yet, so the list is unranked.",
-  test_generation: "Python can be ranked by TestGenEval; Node has no ranking yet.",
-  ci_failure_diagnosis: "Verified models only; diagnosis has no primary ranking yet.",
+  other:
+    "Any model verified for this mode. No benchmark is matched to a custom task.",
+  ci_review:
+    "Ranked by CodeReviewBench F1 when the evidence is directly comparable.",
+  security_analysis:
+    "Verified models only; no comparable ranking exists yet, so the list is unranked.",
+  test_generation:
+    "Python can be ranked by TestGenEval; Node has no ranking yet.",
+  ci_failure_diagnosis:
+    "Verified models only; diagnosis has no primary ranking yet.",
 };
 const explanations: Record<Profile["task"], string> = {
   other:
@@ -77,6 +82,84 @@ function isChosen(
   return (
     selected?.runtimeId === item.runtimeId &&
     selected.observationId === item.observationId
+  );
+}
+// Unranked results for one runtime differ only in their evidence (for example
+// one source row per reasoning effort), so they share a card.
+function byRuntime(rows: Candidate[]) {
+  const groups = new Map<number, Candidate[]>();
+  for (const item of rows) {
+    const list = groups.get(item.runtimeId);
+    if (list) list.push(item);
+    else groups.set(item.runtimeId, [item]);
+  }
+  return [...groups.values()];
+}
+function ModelCard({
+  results,
+  data,
+  selected,
+  onPick,
+}: {
+  results: Candidate[];
+  data: Candidates;
+  selected?: { runtimeId: number; observationId: number } | null;
+  onPick: (item: Candidate) => void;
+}) {
+  const item = results.find((r) => isChosen(r, selected)) ?? results[0];
+  const others = results.filter((r) => r !== item);
+  const chosen = isChosen(item, selected);
+  const label = (r: Candidate) =>
+    `Choose ${r.model} · ${r.provider} · evidence #${r.observationId}`;
+  return (
+    <article className={chosen ? "ci-model ci-model-chosen" : "ci-model"}>
+      <div className="ci-model-head">
+        <h4>{item.model}</h4>
+        {item.method === "benchmark_ranked" && (
+          <span className="ci-rank">#{item.rank}</span>
+        )}
+      </div>
+      <p className="ci-muted">
+        {item.provider} · <code>{item.providerModelId}</code> · Deployment #
+        {item.deploymentId}
+      </p>
+      {item.method === "benchmark_ranked" ? (
+        <p>
+          Rank {item.rank} · {data.policy.metric}:{" "}
+          <strong className="num">{item.score}</strong> ({data.policy.direction}{" "}
+          is better). Source reported: {item.reportedValue ?? "Unknown"}.
+        </p>
+      ) : (
+        <p className="ci-muted">
+          No task recommendation claimed for this choice.
+        </p>
+      )}
+      <CandidateEvidence item={item} />
+      {others.length > 0 && (
+        <details className="ci-more">
+          <summary>
+            {others.length} more benchmark{" "}
+            {others.length === 1 ? "result" : "results"} for this model
+          </summary>
+          {others.map((r) => (
+            <div className="ci-more-result" key={r.observationId}>
+              <CandidateEvidence item={r} />
+              <button aria-label={label(r)} onClick={() => onPick(r)}>
+                Choose with this result
+              </button>
+            </div>
+          ))}
+        </details>
+      )}
+      <button
+        className="primary-action ci-choose"
+        aria-label={label(item)}
+        aria-pressed={chosen}
+        onClick={() => onPick(item)}
+      >
+        {chosen ? "Chosen ✓" : "Choose"}
+      </button>
+    </article>
   );
 }
 export function EligibleModelPicker({
@@ -244,47 +327,17 @@ export function EligibleModelPicker({
                           : "Supported · unranked"}
                       </h3>
                       <div className="ci-model-list">
-                        {rows.map((item) => (
-                          <article
-                            className={
-                              isChosen(item, selected)
-                                ? "ci-model ci-model-chosen"
-                                : "ci-model"
-                            }
-                            key={`${item.runtimeId}:${item.observationId}`}
-                          >
-                            <div className="ci-model-head">
-                              <h4>{item.model}</h4>
-                              {method === "benchmark_ranked" && (
-                                <span className="ci-rank">#{item.rank}</span>
-                              )}
-                            </div>
-                            <p className="ci-muted">
-                              {item.provider} · <code>{item.providerModelId}</code> ·
-                              Deployment #{item.deploymentId}
-                            </p>
-                            {method === "benchmark_ranked" ? (
-                              <p>
-                                Rank {item.rank} · {data.policy.metric}:{" "}
-                                <strong className="num">{item.score}</strong> (
-                                {data.policy.direction} is better). Source
-                                reported: {item.reportedValue ?? "Unknown"}.
-                              </p>
-                            ) : (
-                              <p className="ci-muted">
-                                No task recommendation claimed for this choice.
-                              </p>
-                            )}
-                            <CandidateEvidence item={item} />
-                            <button
-                              className="primary-action ci-choose"
-                              aria-label={`Choose ${item.model} · ${item.provider} · evidence #${item.observationId}`}
-                              aria-pressed={isChosen(item, selected)}
-                              onClick={() => onPick(item)}
-                            >
-                              {isChosen(item, selected) ? "Chosen ✓" : "Choose"}
-                            </button>
-                          </article>
+                        {(method === "benchmark_ranked"
+                          ? rows.map((item) => [item])
+                          : byRuntime(rows)
+                        ).map((results) => (
+                          <ModelCard
+                            key={`${results[0].runtimeId}:${results[0].observationId}`}
+                            results={results}
+                            data={data}
+                            selected={selected}
+                            onPick={onPick}
+                          />
                         ))}
                       </div>
                     </section>
