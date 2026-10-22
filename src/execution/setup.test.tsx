@@ -122,6 +122,30 @@ it("marks the chosen card and scrolls to the selection without the snapshot line
   expect(choose.closest("article")).toHaveClass("ci-model-chosen");
   expect(scroll).toHaveBeenCalled();
 });
+it("shows one card per model and keeps its other results choosable", async () => {
+  const second = { ...row, observationId: 2 };
+  vi.mocked(candidates).mockResolvedValue({
+    ...page,
+    items: [row, second],
+    total: 2,
+  });
+  vi.mocked(revalidate).mockResolvedValue(second);
+  render(<ExecutionSetup />);
+  fireEvent.click(screen.getByLabelText("PR review"));
+  await screen.findByText("1 more benchmark result for this model");
+  expect(screen.getAllByRole("article")).toHaveLength(1);
+  fireEvent.click(
+    screen.getByRole("button", { name: /Choose Exact Alpha .* evidence #2/ }),
+  );
+  const chosen = await screen.findByRole("button", {
+    name: /evidence #2/,
+    pressed: true,
+  });
+  expect(chosen).toHaveTextContent("Chosen");
+  expect(screen.getByRole("button", { name: /evidence #1/ })).toHaveTextContent(
+    "Choose with this result",
+  );
+});
 it("invalidates a pick immediately on profile changes and keeps its label visible", async () => {
   render(<ExecutionSetup />);
   fireEvent.click(screen.getByLabelText("PR review"));
