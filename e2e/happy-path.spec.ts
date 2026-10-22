@@ -26,7 +26,7 @@ test("login → home → explicit setup; existing dashboard and conversation rem
   await page.goto("/");
   await signIn(page);
   await page.getByRole("button", { name: "Set up a CI agent" }).click();
-  await expect(page.getByRole("heading", { name: "Choose a task. Pick an exact model." })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Set up a CI agent" })).toBeVisible();
   await page.goto("/projects");
   await expect(page.getByText("Usage and estimated cost", { exact: true })).toBeVisible();
   const chat = page.getByRole("region", { name: "Grounded chat" });
@@ -110,7 +110,8 @@ for (const width of [1440, 390]) {
     await signIn(page);
     await page.getByRole("button", { name: /View my CI agents/ }).first().click();
     for (const [index, expected] of ["69376", "0", "Not reported"].entries()) {
-      const card = page.getByRole("article").filter({has:page.getByRole("heading",{name:new RegExp(`cache-${index}`)})});
+      await page.getByRole("button", { name: `cache-${index}` }).click();
+      const card = page.getByRole("region", { name: `cache-${index} details` });
       await card.getByText("Usage, rates and attribution",{exact:true}).click();
       await expect(card.locator("dl > div").filter({hasText:"cacheReadTokens"})).toHaveText(`cacheReadTokens${expected}`);
       await expect(card.locator("dl > div").filter({hasText:"inputTokens"})).toHaveText("inputTokens11501");
@@ -138,14 +139,14 @@ for (const reducedMotion of ["no-preference", "reduce"] as const) {
     await expect.poll(() => page.evaluate(() => document.documentElement.scrollHeight - innerHeight)).toBeLessThan(2);
     await page.getByRole("button", { name: "Set up a CI agent", exact: true }).click();
     await expect(page.getByRole("region", { name: "Set up a CI agent", exact: true })).toBeFocused();
-    await expect(page.getByLabel("Task", {exact:true})).toHaveValue("");
+    await expect(page.getByRole("radio", { checked: true })).toHaveCount(0);
     await expect(page.getByRole("group", {name:"Budget sensitivity"})).toHaveCount(0);
     await page.goto("/");
     await expect(page.getByRole("region", { name: "Home", exact: true })).toBeFocused();
     // Smaller screens scroll the single page normally, with no section snapping.
     await page.setViewportSize({ width: 390, height: 844 });
-    await page.getByText("Estimates show their limits. Feedback is not a quality guarantee.").scrollIntoViewIfNeeded();
-    await expect(page.getByText("Estimates show their limits. Feedback is not a quality guarantee.")).toBeInViewport();
+    await page.getByText("Your pipeline. Your API key. You stay in control.").scrollIntoViewIfNeeded();
+    await expect(page.getByText("Your pipeline. Your API key. You stay in control.")).toBeInViewport();
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
     expect(mock.errors, mock.errors.join("\n")).toHaveLength(0);
   });
@@ -172,4 +173,24 @@ test("auth backdrop keeps a clear zone around the message at desktop and tablet 
   await expect(page.locator(".auth-ambient-above")).toBeHidden();
   await expect(page.locator(".auth-ambient-below")).toBeHidden();
   await expect(page.getByRole("heading", { name: "Welcome back" })).toBeVisible();
+});
+
+
+test("home motion stays paused without a toggle and respects reduced motion", async ({ page }) => {
+  await mockBackend(page);
+  await page.route("**/projects", r => r.fulfill({ json: projectsFixture }));
+  await page.goto("/");
+  await signIn(page);
+  const cards = page.locator(".home-action");
+  await expect(cards).toHaveCount(3);
+  await expect(page.getByRole("button", { name: /animations/i })).toHaveCount(0);
+  await expect.poll(() => cards.evaluateAll(elements => elements.every(el => getComputedStyle(el, "::before").animationPlayState === "paused"))).toBe(true);
+  await cards.first().focus();
+  await expect.poll(() => cards.evaluateAll(elements => elements.every(el => getComputedStyle(el, "::before").animationPlayState === "paused"))).toBe(true);
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await expect.poll(() => cards.evaluateAll(elements => elements.every(el => getComputedStyle(el, "::before").animationName === "none"))).toBe(true);
+  await page.setViewportSize({ width: 320, height: 740 });
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(320);
+  await page.getByRole("button", { name: "View my CI agents", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Usage and estimated cost" })).toBeVisible();
 });

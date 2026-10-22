@@ -7,6 +7,7 @@ import type {
   ModelDetail,
   Observation,
   Page,
+  Source,
 } from "./types";
 import { query } from "./api";
 import { useCatalog, useCatalogPages } from "./useCatalog";
@@ -16,34 +17,10 @@ import { Search } from "./Search";
 import { BenchmarkName } from "./BenchmarkName";
 import { EvidenceTable, SourceStatus } from "./EvidenceView";
 import { Compare } from "./Compare";
+import { Leaderboard } from "./ScoreChart";
+import { AppHeader } from "../components/AppHeader";
 import "./catalog.css";
 
-export function CatalogNav() {
-  return (
-    <nav className="catalog-nav" aria-label="Main navigation">
-      <Link href="/benchmarks" className="catalog-brand">
-        Driftplain<span>Benchmark explorer</span>
-      </Link>
-      <div>
-        <Link href="/benchmarks">Explore Benchmarks</Link>
-        <Link
-          href={
-            new URLSearchParams(window.location.search)
-              .get("setupReturn")
-              ?.match(/^\/setup(?:\?|$)/)
-              ? new URLSearchParams(window.location.search).get("setupReturn")!
-              : "/setup"
-          }
-        >
-          {new URLSearchParams(window.location.search).has("setupReturn")
-            ? "Return to CI setup"
-            : "Set Up CI"}
-        </Link>
-        <Link href="/projects">My Projects</Link>
-      </div>
-    </nav>
-  );
-}
 function State({
   request,
   children,
@@ -51,11 +28,19 @@ function State({
   request: { loading: boolean; error?: string; retry: () => void };
   children: ReactNode;
 }) {
-  if (request.loading) return <p role="status">Loading catalog…</p>;
+  if (request.loading)
+    return (
+      <p role="status" className="catalog-empty">
+        Loading catalog…
+      </p>
+    );
   if (request.error)
     return (
       <div role="alert" className="catalog-notice">
-        {request.error} <button onClick={request.retry}>Retry</button>
+        {request.error}{" "}
+        <button className="compact-action" onClick={request.retry}>
+          Retry
+        </button>
       </div>
     );
   return <>{children}</>;
@@ -72,19 +57,24 @@ function Pager({
       <span>
         Stable catalog order · {page?.items.length ?? 0} entries on this page
       </span>
-      {params.has("cursor") && (
-        <button onClick={() => updateParams({ cursor: null })}>
-          First page
-        </button>
-      )}
-      {page?.pageInfo.hasMore && (
-        <button
-          className="secondary-action"
-          onClick={() => updateParams({ cursor: page.pageInfo.nextCursor })}
-        >
-          Next page
-        </button>
-      )}
+      <div>
+        {params.has("cursor") && (
+          <button
+            className="compact-action"
+            onClick={() => updateParams({ cursor: null })}
+          >
+            First page
+          </button>
+        )}
+        {page?.pageInfo.hasMore && (
+          <button
+            className="compact-action"
+            onClick={() => updateParams({ cursor: page.pageInfo.nextCursor })}
+          >
+            Next page
+          </button>
+        )}
+      </div>
     </div>
   );
 }
@@ -116,13 +106,56 @@ function Filter({
     </form>
   );
 }
+function AddButton({
+  choice,
+  choices,
+  add,
+}: {
+  choice: string;
+  choices: string[];
+  add: (choice: string) => void;
+}) {
+  return (
+    <button
+      className="compact-action"
+      disabled={choices.includes(choice) || choices.length >= 4}
+      onClick={() => add(choice)}
+    >
+      {choices.includes(choice) ? "Added" : "Add to compare"}
+    </button>
+  );
+}
+/** One-line source freshness for a table cell; the full status lives on the profile. */
+function SourceCell({ sources }: { sources: Source[] }) {
+  if (!sources.length)
+    return <span className="cell-muted">Freshness unavailable</span>;
+  return (
+    <>
+      {sources.map((s) => (
+        <span key={s.id} className="metric-line">
+          <span className="tag" title={s.name}>
+            <span
+              className={`dot${s.snapshotId == null ? " is-off" : s.refreshStatus === "ok" ? "" : " is-warn"}`}
+            />
+            {s.name}
+          </span>
+          <span className="cell-muted">
+            {s.snapshotId == null
+              ? "No validated snapshot"
+              : `Retrieved ${s.fetchedAt?.slice(0, 10) ?? "unknown"}`}
+          </span>
+        </span>
+      ))}
+    </>
+  );
+}
 interface ViewProps {
   params: URLSearchParams;
   choices: string[];
   add: (choice: string) => void;
   benchmarks: Benchmark[];
 }
-function Benchmarks({ params }: ViewProps) {
+function Benchmarks({ params, benchmarks }: ViewProps) {
   const collection = params.get("collection");
   const request = useCatalog<Page<Benchmark>>(
     `benchmarks?${query({ limit: 24, q: params.get("q"), collection, cursor: params.get("cursor") })}`,
@@ -132,67 +165,89 @@ function Benchmarks({ params }: ViewProps) {
       <p className="eyebrow">Public evidence · no account needed</p>
       <h1>Explore benchmarks</h1>
       <p className="catalog-intro">
-        Understand what a test measures. Inspect the source. Compare matching
-        evidence.
+        Pick a benchmark to see how models score on it. Every bar comes from one
+        published source table.
       </p>
-      <div className="capability-tabs" aria-label="Capability filters">
-        <button
-          aria-pressed={!collection}
-          onClick={() => updateParams({ collection: null, cursor: null })}
-        >
-          All capabilities
-        </button>
-        {Object.entries(collections).map(([value, label]) => (
+      <Leaderboard benchmarks={benchmarks} />
+      <section className="catalog-section" aria-labelledby="all-benchmarks">
+        <div className="section-head">
+          <div>
+            <h2 id="all-benchmarks">All benchmarks</h2>
+            <p>What each test measures, its versions and source freshness.</p>
+          </div>
+          <Filter
+            key={params.get("q") ?? ""}
+            value={params.get("q") ?? ""}
+            label="Find a benchmark"
+          />
+        </div>
+        <div className="segmented capability-filters" aria-label="Capability filters" role="group">
           <button
-            key={value}
-            aria-pressed={collection === value}
-            onClick={() => updateParams({ collection: value, cursor: null })}
+            aria-pressed={!collection}
+            onClick={() => updateParams({ collection: null, cursor: null })}
           >
-            {label}
+            All capabilities
           </button>
-        ))}
-      </div>
-      <Filter
-        key={params.get("q") ?? ""}
-        value={params.get("q") ?? ""}
-        label="Find a benchmark"
-      />
-      <State request={request}>
-        {!request.data?.items.length && (
-          <p>No matching benchmarks. Try another name or capability.</p>
-        )}
-        <div className="benchmark-grid">
-          {request.data?.items.map((b) => (
-            <article className="card" key={b.id}>
-              <p className="eyebrow">{collectionName(b.collection)}</p>
-              <h2>
-                <BenchmarkName benchmark={b} />
-              </h2>
-              <p>
-                {b.tooltip ?? b.description ?? "Explanation not yet available."}
-              </p>
-              <p className="text-muted">
-                Versions: {b.versionLabels?.join(" · ") || "Unknown"}
-                <br />
-                Units:{" "}
-                {b.metricUnits?.join(" · ") || "No measured units reported"}
-              </p>
-              {b.sources?.length ? (
-                b.sources.map((s) => <SourceStatus key={s.id} source={s} />)
-              ) : (
-                <p className="text-muted">
-                  Source freshness unavailable. Inspect evidence for known
-                  provenance.
-                </p>
-              )}
-              <Link className="catalog-card-link" href={`/benchmarks/${b.id}`}>
-                View results & versions →
-              </Link>
-            </article>
+          {Object.entries(collections).map(([value, label]) => (
+            <button
+              key={value}
+              aria-pressed={collection === value}
+              onClick={() => updateParams({ collection: value, cursor: null })}
+            >
+              {label}
+            </button>
           ))}
         </div>
-        <Pager page={request.data} params={params} />
-      </State>
+        <State request={request}>
+          {request.data?.items.length ? (
+            <div className="table-scroll" tabIndex={0} aria-label="Benchmarks table">
+              <table className="catalog-table">
+                <thead>
+                  <tr>
+                    <th>Benchmark</th>
+                    <th className="hide-sm">Capability</th>
+                    <th className="hide-sm">Versions · units</th>
+                    <th>Source</th>
+                    <th>
+                      <span className="sr-only">Results</span>
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {request.data.items.map((b) => (
+                    <tr key={b.id}>
+                      <td>
+                        <span className="row-title">
+                          <BenchmarkName benchmark={b} />
+                        </span>
+                        <small className="clamp">
+                          {b.tooltip ?? b.description ?? "Explanation not yet available."}
+                        </small>
+                      </td>
+                      <td className="hide-sm cell-muted">{collectionName(b.collection)}</td>
+                      <td className="hide-sm">
+                        {b.versionLabels?.join(" · ") || "Version unknown"}
+                        <small>{b.metricUnits?.join(" · ") || "No measured units reported"}</small>
+                      </td>
+                      <td>
+                        <SourceCell sources={b.sources ?? []} />
+                      </td>
+                      <td className="cell-action">
+                        <Link className="compact-action" href={`/benchmarks/${b.id}`}>
+                          Results →
+                        </Link>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <p className="catalog-empty">No matching benchmarks. Try another name or capability.</p>
+          )}
+          <Pager page={request.data} params={params} />
+        </State>
+      </section>
     </section>
   );
 }
@@ -202,45 +257,54 @@ function Models({ params, choices, add }: ViewProps) {
   );
   return (
     <section>
-      <h1>Models</h1>
-      <p>
-        Canonical identities and reviewed aliases. Source labels awaiting
-        identity review remain visible in benchmark evidence.
-      </p>
-      <Filter
-        key={params.get("q") ?? ""}
-        value={params.get("q") ?? ""}
-        label="Find a model, alias or provider"
-      />
+      <div className="section-head">
+        <div>
+          <h1>Models</h1>
+          <p className="catalog-lede">
+            Canonical identities and reviewed aliases. Source labels awaiting identity
+            review remain visible in benchmark evidence.
+          </p>
+        </div>
+        <Filter
+          key={params.get("q") ?? ""}
+          value={params.get("q") ?? ""}
+          label="Find a model, alias or provider"
+        />
+      </div>
       <State request={request}>
-        {!request.data?.items.length && (
-          <p>
+        {request.data?.items.length ? (
+          <div className="table-scroll" tabIndex={0} aria-label="Models table">
+            <table className="catalog-table">
+              <thead>
+                <tr>
+                  <th>Model</th>
+                  <th>Organization</th>
+                  <th>
+                    <span className="sr-only">Actions</span>
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {request.data.items.map((m) => (
+                  <tr key={m.id}>
+                    <td className="row-title">
+                      <Link href={`/models/${m.id}`}>{m.name}</Link>
+                    </td>
+                    <td className="cell-muted">{m.organization ?? "Organization unknown"}</td>
+                    <td className="cell-action">
+                      <AddButton choice={`m${m.id}`} choices={choices} add={add} />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <p className="catalog-empty">
             No matching canonical models.{" "}
-            <Link href={`/evidence?${query({ q: params.get("q") })}`}>
-              Search source labels
-            </Link>
-            .
+            <Link href={`/evidence?${query({ q: params.get("q") })}`}>Search source labels</Link>.
           </p>
         )}
-        <div className="model-grid">
-          {request.data?.items.map((m) => (
-            <article className="card" key={m.id}>
-              <p className="eyebrow">
-                {m.organization ?? "Organization unknown"}
-              </p>
-              <h2>
-                <Link href={`/models/${m.id}`}>{m.name}</Link>
-              </h2>
-              <button
-                className="secondary-action"
-                disabled={choices.includes(`m${m.id}`) || choices.length >= 4}
-                onClick={() => add(`m${m.id}`)}
-              >
-                {choices.includes(`m${m.id}`) ? "Added" : "Add to compare"}
-              </button>
-            </article>
-          ))}
-        </div>
         <Pager page={request.data} params={params} />
       </State>
     </section>
@@ -270,16 +334,14 @@ function EvidenceList({
           Evidence view
           <select
             value={view}
-            onChange={(e) =>
-              updateParams({ view: e.target.value, cursor: null })
-            }
+            onChange={(e) => updateParams({ view: e.target.value, cursor: null })}
           >
             <option value="active">Active snapshots</option>
             <option value="history">All history (including legacy)</option>
           </select>
         </label>
       </div>
-      <p className="text-muted">
+      <p className="profile-note">
         {view === "active"
           ? "Showing currently active, validated snapshots. A refresh may retain scoped or incomplete rows; inspect coverage."
           : "Showing immutable history. Earlier versions and unknown legacy settings stay separate."}
@@ -293,10 +355,9 @@ function EvidenceList({
             add={add}
           />
         ) : (
-          <p role="status">
-            No evidence in this view. A definition may have no reported results;
-            try all history or adjust the filters. Missing evidence is not a
-            zero score.
+          <p role="status" className="catalog-empty">
+            No evidence in this view. A definition may have no reported results; try all
+            history or adjust the filters. Missing evidence is not a zero score.
           </p>
         )}
         <Pager page={request.data} params={params} />
@@ -311,50 +372,80 @@ function ModelProfile({ id, ...props }: ViewProps & { id: number }) {
     <State request={request}>
       {m && (
         <>
-          <p className="eyebrow">{m.organization ?? "Organization unknown"}</p>
-          <h1>{m.name}</h1>
-          <p>{m.description}</p>
-          <p>Reviewed aliases: {m.aliases.join(", ") || "None published"}</p>
-          <button
-            className="secondary-action"
-            disabled={
-              props.choices.includes(`m${id}`) || props.choices.length >= 4
-            }
-            onClick={() => props.add(`m${id}`)}
-          >
-            Add to compare
-          </button>
-          <div className="catalog-notice">
-            <Link
-              className="secondary-action"
-              href={setupHref(
-                id,
-                null,
-                new URLSearchParams(window.location.search).get("setupReturn"),
-              )}
-            >
-              Use in CI
-            </Link>
-            <p>
-              CI support is not established by catalog evidence. Check Set Up CI
-              for available configurations.
-            </p>
+          <Link className="back-link" href="/models">
+            ← Models
+          </Link>
+          <div className="profile-head">
+            <div>
+              <p className="eyebrow">{m.organization ?? "Organization unknown"}</p>
+              <h1>{m.name}</h1>
+              {m.description && <p className="catalog-lede">{m.description}</p>}
+              <div className="profile-meta">
+                {m.aliases.length ? (
+                  m.aliases.map((a) => (
+                    <span className="tag" key={a}>
+                      {a}
+                    </span>
+                  ))
+                ) : (
+                  <span className="tag">No reviewed aliases published</span>
+                )}
+              </div>
+            </div>
+            <div className="profile-actions">
+              <AddButton choice={`m${id}`} choices={props.choices} add={props.add} />
+              <Link
+                className="primary-action"
+                href={setupHref(
+                  id,
+                  null,
+                  new URLSearchParams(window.location.search).get("setupReturn"),
+                )}
+              >
+                Use in CI
+              </Link>
+            </div>
           </div>
-          <h2>Provider deployments</h2>
-          {m.deployments.length ? (
-            <ul>
-              {m.deployments.map((d) => (
-                <li key={d.id}>
-                  {d.providerName} · {d.name} · <code>{d.deploymentKey}</code>{" "}
-                  {d.variant}
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p>No reviewed provider deployments listed.</p>
-          )}
-          <h2>Benchmark evidence</h2>
-          <EvidenceList {...props} modelId={id} />
+          <p className="profile-note">
+            CI support is not established by catalog evidence. Check Set Up CI for
+            available configurations.
+          </p>
+          <section className="catalog-section">
+            <h2>Provider deployments</h2>
+            {m.deployments.length ? (
+              <div className="table-scroll" style={{ marginTop: 12 }}>
+                <table className="catalog-table">
+                  <thead>
+                    <tr>
+                      <th>Provider</th>
+                      <th>Deployment</th>
+                      <th>Key</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {m.deployments.map((d) => (
+                      <tr key={d.id}>
+                        <td className="row-title">{d.providerName}</td>
+                        <td>
+                          {d.name}
+                          {d.variant && <small>{d.variant}</small>}
+                        </td>
+                        <td>
+                          <code>{d.deploymentKey}</code>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <p className="profile-note">No reviewed provider deployments listed.</p>
+            )}
+          </section>
+          <section className="catalog-section">
+            <h2 style={{ marginBottom: 12 }}>Benchmark evidence</h2>
+            <EvidenceList {...props} modelId={id} />
+          </section>
         </>
       )}
     </State>
@@ -370,75 +461,91 @@ function BenchmarkProfile({ id, ...props }: ViewProps & { id: number }) {
     <State request={request}>
       {b && (
         <>
-          <p className="eyebrow">{collectionName(b.collection)}</p>
-          <h1>
-            <BenchmarkName benchmark={b} linked={false} />
-          </h1>
-          <p>{b.tooltip ?? b.description}</p>
-          <p className="text-muted">{b.limitations}</p>
-          {(b.sources ?? []).map((s) => (
-            <SourceStatus key={s.id} source={s} />
-          ))}
-          <div className="catalog-filters">
-            <label>
-              Dataset version
-              <select
-                value={props.params.get("versionId") ?? ""}
-                onChange={(e) =>
-                  updateParams({
-                    versionId: e.target.value,
-                    protocolId: null,
-                    cursor: null,
-                  })
-                }
-              >
-                <option value="">All versions (kept separate)</option>
-                {b.versions.map((v) => (
-                  <option key={v.id} value={v.id}>
-                    {v.version}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label>
-              Protocol
-              <select
-                value={props.params.get("protocolId") ?? ""}
-                onChange={(e) =>
-                  updateParams({ protocolId: e.target.value, cursor: null })
-                }
-              >
-                <option value="">All protocols (kept separate)</option>
-                {(version ? [version] : b.versions)
-                  .flatMap((v) => v.protocols)
-                  .map((p) => (
-                    <option value={p.id} key={p.id}>
-                      {p.name}
+          <Link className="back-link" href="/benchmarks">
+            ← Benchmarks
+          </Link>
+          <div className="profile-head">
+            <div>
+              <p className="eyebrow">{collectionName(b.collection)}</p>
+              <h1>
+                <BenchmarkName benchmark={b} linked={false} />
+              </h1>
+              <p className="catalog-lede">{b.tooltip ?? b.description}</p>
+              {b.limitations && <p className="profile-note">{b.limitations}</p>}
+            </div>
+          </div>
+          <Leaderboard benchmarks={[b]} fixedId={b.id} />
+          {(b.sources ?? []).length > 0 && (
+            <div className="source-list">
+              {b.sources.map((s) => (
+                <SourceStatus key={s.id} source={s} />
+              ))}
+            </div>
+          )}
+          <section className="catalog-section">
+            <div className="section-head">
+              <div>
+                <h2>All results</h2>
+                <p>Every row, including unresolved labels and incomplete provenance.</p>
+              </div>
+            </div>
+            <div className="catalog-filters">
+              <label>
+                Dataset version
+                <select
+                  value={props.params.get("versionId") ?? ""}
+                  onChange={(e) =>
+                    updateParams({
+                      versionId: e.target.value,
+                      protocolId: null,
+                      cursor: null,
+                    })
+                  }
+                >
+                  <option value="">All versions (kept separate)</option>
+                  {b.versions.map((v) => (
+                    <option key={v.id} value={v.id}>
+                      {v.version}
                     </option>
                   ))}
-              </select>
-            </label>
-          </div>
-          {version && (
-            <p>
-              {version.methodology}
-              {safeUrl(version.methodologyUrl) && (
-                <a
-                  href={safeUrl(version.methodologyUrl)}
-                  target="_blank"
-                  rel="noreferrer"
+                </select>
+              </label>
+              <label>
+                Protocol
+                <select
+                  value={props.params.get("protocolId") ?? ""}
+                  onChange={(e) =>
+                    updateParams({ protocolId: e.target.value, cursor: null })
+                  }
                 >
-                  {" "}
-                  Version methodology ↗
-                </a>
-              )}
-            </p>
-          )}
-          <EvidenceList
-            {...props}
-            benchmarks={[b, ...props.benchmarks.filter((x) => x.id !== id)]}
-            benchmarkId={id}
-          />
+                  <option value="">All protocols (kept separate)</option>
+                  {(version ? [version] : b.versions)
+                    .flatMap((v) => v.protocols)
+                    .map((p) => (
+                      <option value={p.id} key={p.id}>
+                        {p.name}
+                      </option>
+                    ))}
+                </select>
+              </label>
+            </div>
+            {version && (
+              <p className="profile-note">
+                {version.methodology}
+                {safeUrl(version.methodologyUrl) && (
+                  <a href={safeUrl(version.methodologyUrl)} target="_blank" rel="noreferrer">
+                    {" "}
+                    Version methodology ↗
+                  </a>
+                )}
+              </p>
+            )}
+            <EvidenceList
+              {...props}
+              benchmarks={[b, ...props.benchmarks.filter((x) => x.id !== id)]}
+              benchmarkId={id}
+            />
+          </section>
         </>
       )}
     </State>
@@ -470,6 +577,12 @@ function TrayChoice({
     </span>
   );
 }
+const sections = [
+  { href: "/benchmarks", label: "Benchmarks", match: /^\/benchmarks/ },
+  { href: "/models", label: "Models", match: /^\/models/ },
+  { href: "/compare", label: "Compare", match: /^\/compare/ },
+  { href: "/evidence", label: "Source labels", match: /^\/evidence/ },
+];
 export function CatalogApp({ location }: { location: string }) {
   const [path, search = ""] = location.split("?");
   const params = new URLSearchParams(search);
@@ -494,20 +607,25 @@ export function CatalogApp({ location }: { location: string }) {
   const compareUrl = `/compare?${query({ compare: choices.join(",") })}`;
   return (
     <div className="catalog-shell">
+      <AppHeader current="benchmarks" />
       <main className="catalog-main" ref={heading} tabIndex={-1}>
-        <div className="catalog-subnav">
-          <Link href={`/benchmarks?${query({ compare: choices.join(",") })}`}>
-            Benchmarks
-          </Link>
-          <Link href={`/models?${query({ compare: choices.join(",") })}`}>
-            Models
-          </Link>
-          <Link href={compareUrl}>Compare</Link>
-          <Link href={`/evidence?${query({ compare: choices.join(",") })}`}>
-            Source labels
-          </Link>
+        <div className="catalog-bar">
+          <nav className="segmented" aria-label="Explorer sections">
+            {sections.map((s) => (
+              <Link
+                key={s.href}
+                href={s.href === "/compare" ? compareUrl : `${s.href}?${query({ compare: choices.join(",") })}`}
+                aria-current={s.match.test(path) ? "page" : undefined}
+              >
+                {s.label}
+                {s.href === "/compare" && choices.length > 0 && (
+                  <span className="tab-count">{choices.length}</span>
+                )}
+              </Link>
+            ))}
+          </nav>
+          <Search />
         </div>
-        <Search />
         {path === "/benchmarks" ? (
           <Benchmarks {...props} />
         ) : path === "/models" ? (
@@ -515,11 +633,7 @@ export function CatalogApp({ location }: { location: string }) {
         ) : /^\/models\/[1-9]\d*$/.test(path) ? (
           <ModelProfile key={path} {...props} id={Number(path.split("/")[2])} />
         ) : /^\/benchmarks\/[1-9]\d*$/.test(path) ? (
-          <BenchmarkProfile
-            key={path}
-            {...props}
-            id={Number(path.split("/")[2])}
-          />
+          <BenchmarkProfile key={path} {...props} id={Number(path.split("/")[2])} />
         ) : path === "/compare" ? (
           <State request={request}>
             <Compare {...props} />
@@ -527,9 +641,9 @@ export function CatalogApp({ location }: { location: string }) {
         ) : path === "/evidence" ? (
           <>
             <h1>Source-label evidence</h1>
-            <p>
-              Search labels exactly as reported, including unresolved
-              identities. Similar names are never merged automatically.
+            <p className="catalog-lede">
+              Search labels exactly as reported, including unresolved identities. Similar
+              names are never merged automatically.
             </p>
             <EvidenceList {...props} />
           </>
@@ -542,10 +656,7 @@ export function CatalogApp({ location }: { location: string }) {
         <aside aria-label="Comparison tray" className="comparison-tray">
           <div>
             <strong>Compare · {choices.length}/4</strong>
-            <span className="text-muted">
-              {" "}
-              Choose 2–4 models or source rows
-            </span>
+            <span> Choose 2–4 models or source rows</span>
           </div>
           <div className="tray-choices">
             {choices.map((choice) => (

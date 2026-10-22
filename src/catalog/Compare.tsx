@@ -1,18 +1,25 @@
 import { useEffect, useState } from "react";
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  Tooltip,
-  ResponsiveContainer,
-} from "recharts";
 import { allPages, catalog, query } from "./api";
 import type { Benchmark, Metric, ModelDetail, Observation } from "./types";
-import { comparisonKey, collectionName, formatMetric } from "./evidence";
+import {
+  comparisonKey,
+  collectionName,
+  formatMetric,
+  isComparable,
+  metricLabel,
+  runSettings,
+} from "./evidence";
 import { BenchmarkName } from "./BenchmarkName";
 import { EvidenceDetails } from "./EvidenceView";
 import { Link, updateParams } from "./navigation";
+import {
+  BenchmarkStrip,
+  ChartCaption,
+  MetricNote,
+  ScoreBars,
+  TablePicker,
+} from "./ScoreChart";
+import { numeric, type ResultTable, type ScoreBar } from "./chartData";
 interface Column {
   choice: string;
   name: string;
@@ -28,6 +35,12 @@ interface Group {
   metric: Metric;
   cells: Entry[][];
 }
+const asTable = (g: Group): ResultTable => ({
+  key: g.key,
+  metric: g.metric,
+  observation: g.observation,
+  rows: g.cells.flat(),
+});
 export function Compare({
   choices,
   benchmarks,
@@ -119,6 +132,7 @@ export function Compare({
     entries.length === 1
       ? entries[0]
       : entries.find((e) => selected.has(e.observation.id));
+  const settingsFor = (entries: Entry[]) => runSettings(entries.map((e) => e.observation));
   const select = (entries: Entry[], id: string) => {
     const next = new Set(selected);
     entries.forEach((e) => next.delete(e.observation.id));
@@ -126,14 +140,53 @@ export function Compare({
     next.delete(0);
     updateParams({ observations: [...next].join(",") });
   };
-  const chart = groups.get(params.get("chart") ?? "");
-  const chartRows =
-    chart?.cells.flatMap((entries, i) => {
-      const e = chosen(entries);
-      return e?.metric.value != null && Number.isFinite(Number(e.metric.value))
-        ? [{ name: columns![i].name, value: Number(e.metric.value) }]
-        : [];
-    }) ?? [];
+  // Chartable scopes: one published source table with a reported value for at least one choice.
+  const chartable = [...groups.values()].filter(
+    (g) =>
+      isComparable(g.observation, g.metric) &&
+      g.cells.some((cell) => cell.some((e) => numeric(e.metric) != null)),
+  );
+  const benchmarkName = (id: number, fallback: string) =>
+    benchmarks.find((b) => b.id === id)?.name ?? fallback;
+  const chart =
+    chartable.find((g) => g.key === params.get("chart")) ??
+    [...chartable].sort(
+      (a, b) =>
+        b.cells.filter((c) => c.length).length -
+        a.cells.filter((c) => c.length).length,
+    )[0];
+  const stripItems = [
+    ...new Map(
+      chartable.map((g) => [
+        g.observation.benchmarkId,
+        {
+          id: g.observation.benchmarkId,
+          name: benchmarkName(g.observation.benchmarkId, g.observation.benchmarkName),
+        },
+      ]),
+    ).values(),
+  ];
+  const chartTables = chart
+    ? chartable.filter((g) => g.observation.benchmarkId === chart.observation.benchmarkId)
+    : [];
+  const bars: ScoreBar[] = [];
+  const unchosen: string[] = [];
+  const unreported: string[] = [];
+  const chartSettings = runSettings(chart?.cells.flat().map((e) => e.observation) ?? []);
+  chart?.cells.forEach((cell, i) => {
+    const e = chosen(cell);
+    const value = e ? numeric(e.metric) : null;
+    if (cell.length > 1 && !e) unchosen.push(columns![i].name);
+    else if (!e || value == null) unreported.push(columns![i].name);
+    else
+      bars.push({
+        id: columns![i].choice,
+        label: columns![i].name,
+        detail: chartSettings.get(e.observation.id),
+        title: `${e.observation.sourceModelLabel} · ${e.observation.protocol ?? "Protocol unknown"}`,
+        value,
+      });
+  });
   const byCollection = new Map<string, Group[]>();
   for (const g of groups.values()) {
     const category = collectionName(
@@ -145,10 +198,9 @@ export function Compare({
   return (
     <section>
       <h1>Compare evidence</h1>
-      <p>
-        Choose 2–4 models or exact unresolved source rows. Each row preserves
-        one dataset, protocol, evaluator, snapshot and metric scope. No combined
-        score.
+      <p className="catalog-lede">
+        Choose 2–4 models or exact unresolved source rows. Scores are compared only
+        inside one published source table. No combined score.
       </p>
       <div className="catalog-filters">
         <label>
@@ -197,18 +249,20 @@ export function Compare({
           </p>
         )}
       {choices.length < 2 ? (
-        <p role="status">
+        <p role="status" className="catalog-empty">
           Add at least two choices from Models or benchmark evidence.
         </p>
       ) : result?.key === requestKey && result.error ? (
-        <div role="alert">
+        <div role="alert" className="catalog-notice">
           {result.error}{" "}
-          <button onClick={() => setRetry((n) => n + 1)}>
+          <button className="compact-action" onClick={() => setRetry((n) => n + 1)}>
             Retry comparison
           </button>
         </div>
       ) : !columns ? (
-        <p role="status">Loading comparison…</p>
+        <p role="status" className="catalog-empty">
+          Loading comparison…
+        </p>
       ) : (
         <>
           {!groups.size &&
@@ -226,85 +280,63 @@ export function Compare({
                 </Link>
               </div>
             ) : (
-              <p>
+              <p className="catalog-empty">
                 No evidence for these choices in this view. Try another
                 benchmark or exact source rows.
               </p>
             ))}
           {chart && (
             <section
-              className="card comparison-chart"
+              className="chart-card"
               aria-label="Comparable measurement chart"
             >
-              <h2>
-                {benchmarks.find(
-                  (b) => b.id === chart.observation.benchmarkId,
-                ) && (
-                  <BenchmarkName
-                    benchmark={
-                      benchmarks.find(
-                        (b) => b.id === chart.observation.benchmarkId,
-                      )!
-                    }
-                  />
-                )}{" "}
-                · {chart.metric.name}
-              </h2>
-              <p>
-                {chart.metric.unit ?? "Unit unknown"} ·{" "}
-                {chart.metric.direction === "higher"
-                  ? "Higher is better"
-                  : chart.metric.direction === "lower"
-                    ? "Lower is better"
-                    : "Not ranked"}{" "}
-                · {chart.observation.version}
-              </p>
-              {chartRows.length < 2 ? (
-                <p>
-                  Select at least two reported, comparable measurements to draw
-                  this chart. Missing values are omitted.
-                </p>
-              ) : (
-                <>
-                  <ResponsiveContainer
-                    width="100%"
-                    height={Math.max(200, chartRows.length * 65)}
-                  >
-                    <BarChart
-                      data={chartRows}
-                      layout="vertical"
-                      margin={{ left: 10, right: 30 }}
-                    >
-                      <XAxis
-                        type="number"
-                        domain={
-                          chart.metric.unit === "percent"
-                            ? [0, 100]
-                            : chart.metric.unit === "ratio"
-                              ? [0, 1]
-                              : [0, "auto"]
-                        }
-                      />
-                      <YAxis dataKey="name" type="category" width={170} />
-                      <Tooltip />
-                      <Bar
-                        dataKey="value"
-                        fill="#5794f2"
-                        isAnimationActive={false}
-                      />
-                    </BarChart>
-                  </ResponsiveContainer>
-                  <p>
-                    Values are also available in the table below; no missing
-                    measurement is plotted as zero.
-                  </p>
-                </>
+              {stripItems.length > 1 && (
+                <BenchmarkStrip
+                  items={stripItems}
+                  selected={chart.observation.benchmarkId}
+                  onSelect={(id) =>
+                    updateParams(
+                      { chart: chartable.find((g) => g.observation.benchmarkId === id)?.key ?? null },
+                      true,
+                    )
+                  }
+                />
               )}
+              <div className="chart-head">
+                <div>
+                  <h2 className="section-title">
+                    {benchmarkName(chart.observation.benchmarkId, chart.observation.benchmarkName)}
+                    <span> · {metricLabel(chart.metric)}</span>
+                  </h2>
+                </div>
+              </div>
+              <TablePicker
+                tables={chartTables.map(asTable)}
+                selected={chart.key}
+                onSelect={(key) => updateParams({ chart: key }, true)}
+              />
+              <MetricNote table={asTable(chart)} />
+              {bars.length ? (
+                <ScoreBars bars={bars} metric={chart.metric} />
+              ) : (
+                <p className="chart-empty">
+                  Choose a source row in the table below to draw this chart.
+                </p>
+              )}
+              <ChartCaption table={asTable(chart)}>
+                {unreported.length > 0 && <p>No reported value: {unreported.join(", ")}.</p>}
+                {unchosen.length > 0 && (
+                  <p>
+                    Several rows match {unchosen.join(", ")}; choose one in the table
+                    below. The highest value is never picked for you.
+                  </p>
+                )}
+              </ChartCaption>
             </section>
           )}
           {[...byCollection].map(([category, entries]) => (
-            <section key={category}>
-              <h2>{category}</h2>
+            <section key={category} className="catalog-section">
+              <h2 style={{ marginBottom: 12 }}>{category}</h2>
               <div
                 className="table-scroll"
                 tabIndex={0}
@@ -327,11 +359,13 @@ export function Compare({
                       return (
                         <tr key={g.key}>
                           <th>
-                            {b ? (
-                              <BenchmarkName benchmark={b} />
-                            ) : (
-                              g.observation.benchmarkName
-                            )}
+                            <span className="row-title">
+                              {b ? (
+                                <BenchmarkName benchmark={b} />
+                              ) : (
+                                g.observation.benchmarkName
+                              )}
+                            </span>
                             <small>
                               {g.metric.name} ·{" "}
                               {g.metric.unit ?? "Unit unknown"} ·{" "}
@@ -340,23 +374,29 @@ export function Compare({
                               {g.metric.subset && ` · ${g.metric.subset}`}
                             </small>
                             <small>
-                              {g.observation.protocol ?? "Protocol unknown"} ·
+                              {g.observation.evaluator ?? "Evaluator unknown"} ·
                               Snapshot #
                               {g.observation.sourceSnapshotId ?? "Unknown"}
                             </small>
-                            <button
-                              className="text-accent"
-                              onClick={() => updateParams({ chart: g.key })}
-                            >
-                              Chart this scope
-                            </button>
+                            {chartable.includes(g) && (
+                              <button
+                                className="text-button"
+                                aria-pressed={g === chart}
+                                onClick={() => {
+                                  updateParams({ chart: g.key });
+                                  document.documentElement.scrollTop = 0;
+                                }}
+                              >
+                                Chart this scope
+                              </button>
+                            )}
                           </th>
                           {g.cells.map((cell, i) => {
                             const e = chosen(cell);
                             return (
                               <td key={columns[i].choice}>
                                 {!cell.length ? (
-                                  <span>Not reported in this scope</span>
+                                  <span className="cell-muted">Not reported in this scope</span>
                                 ) : (
                                   <>
                                     {cell.length > 1 && (
@@ -379,10 +419,9 @@ export function Compare({
                                               key={entry.observation.id}
                                             >
                                               #{entry.observation.id} ·{" "}
-                                              {
-                                                entry.observation
-                                                  .sourceModelLabel
-                                              }{" "}
+                                              {entry.observation.sourceModelLabel}
+                                              {settingsFor(cell).get(entry.observation.id) &&
+                                                ` (${settingsFor(cell).get(entry.observation.id)})`}{" "}
                                               · {formatMetric(entry.metric)}
                                             </option>
                                           ))}
@@ -395,10 +434,10 @@ export function Compare({
                                           {formatMetric(e.metric)}
                                         </strong>
                                         {e.metric.value == null && (
-                                          <p>
+                                          <small>
                                             {e.metric.missingReason ??
                                               "Measurement absent"}
-                                          </p>
+                                          </small>
                                         )}
                                         <EvidenceDetails
                                           observation={e.observation}

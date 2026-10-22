@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { CatalogApp, CatalogNav } from "./catalog/CatalogApp";
+import { CatalogApp } from "./catalog/CatalogApp";
 import { ExecutionSetup } from "./execution/ExecutionSetup";
 import { Link, navigate, useLocation } from "./catalog/navigation";
 import { Loader2 } from "lucide-react";
@@ -11,9 +11,18 @@ import { Home } from "./pages/Home";
 import { Dashboard } from "./pages/Dashboard";
 import { AuthLayout } from "./components/AuthLayout";
 import { PageSurface } from "./components/PageSurface";
+import { AppHeader } from "./components/AppHeader";
 import { usePageTransition } from "./lib/usePageTransition";
 
 type Phase = "loading" | "home" | "onboarding" | "dashboard";
+
+function initialPhase(): Phase {
+  const { pathname, search } = window.location;
+  if (["/setup", "/legacy-setup"].includes(pathname)) return "onboarding";
+  const project = Number(new URLSearchParams(search).get("project"));
+  return pathname === "/projects" || (Number.isSafeInteger(project) && project > 0)
+    ? "dashboard" : "home";
+}
 
 // Top-level auth + navigation gate (no router yet). Token presence picks Login vs the
 // app; once signed in, the user lands on the home hub (phase "home"), which routes into
@@ -42,7 +51,7 @@ function AuthenticatedApp() {
   }, [cancel]);
 
   const handleAuthed = () => {
-    window.history.replaceState({ mmPhase: ["/setup", "/legacy-setup"].includes(window.location.pathname) ? "onboarding" : window.location.pathname === "/projects" ? "dashboard" : "home" }, "");
+    window.history.replaceState({ mmPhase: initialPhase() }, "");
     setPhase("loading");
     setAuthed(true);
   };
@@ -93,7 +102,7 @@ function AuthenticatedApp() {
       const restored: Phase =
         saved === "dashboard" || saved === "onboarding" || saved === "home"
           ? saved
-          : ["/setup", "/legacy-setup"].includes(window.location.pathname) ? "onboarding" : window.location.pathname === "/projects" ? "dashboard" : "home";
+          : initialPhase();
       // Seed the landing history entry only when there isn't one yet (replace, not push,
       // so Back from home leaves the app cleanly); on a reload we keep the saved entry.
       if (saved == null) window.history.replaceState({ mmPhase: restored }, "");
@@ -154,12 +163,13 @@ function AuthenticatedApp() {
   }
 
   if (phase === "onboarding") {
-    return <PageSurface name="Legacy setup retired"><main className="mx-auto max-w-2xl p-8">
-      <h1 className="text-2xl font-semibold">Weighted recommendations have been retired.</h1>
-      <p className="my-4 text-muted">Choose an explicit source-backed model in CI setup.
+    return <PageSurface name="Legacy setup retired"><AppHeader /><main className="page-shell" style={{ maxWidth: 720 }}>
+      <p className="eyebrow">Setup changed</p>
+      <h1 className="page-title mt-3">Weighted recommendations have been retired.</h1>
+      <p className="page-lede">Choose an explicit source-backed model in CI setup.
         Existing projects, CI tokens and run history remain available. If no eligible model
         is listed, exact runtime verification is still pending.</p>
-      <nav className="flex flex-wrap gap-6"><Link href="/setup">Set Up CI</Link><Link href="/projects">My Projects</Link><Link href="/benchmarks">Explore Benchmarks</Link></nav>
+      <nav className="mt-8 flex flex-wrap gap-3"><Link className="primary-action" href="/setup">Set Up CI</Link><Link className="secondary-action" href="/projects">My Projects</Link><Link className="secondary-action" href="/benchmarks">Explore Benchmarks</Link></nav>
     </main></PageSurface>;
   }
 
@@ -178,5 +188,5 @@ export function App() {
   const location = useLocation();
   const path = location.split("?")[0];
   const publicRoute = /^\/(benchmarks|models|compare|evidence)(\/|$)/.test(path);
-  return publicRoute ? <><CatalogNav /><CatalogApp location={location} /></> : <AuthenticatedApp key={path} />;
+  return publicRoute ? <CatalogApp location={location} /> : <AuthenticatedApp key={path} />;
 }

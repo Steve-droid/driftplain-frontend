@@ -18,9 +18,9 @@ export function ProjectSwitcher({
 
   if (projects.length === 1) {
     return (
-      <span className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-panel px-3 py-2 text-xs font-medium text-muted">
+      <span className="inline-flex min-w-0 max-w-full items-center gap-1.5 rounded-lg border border-border bg-panel px-3 py-2 text-xs font-medium text-muted">
         <FolderGit2 size={13} className="text-faint" />
-        {active?.name ?? `CI-Agent #${value}`}
+        <span className="truncate">{active?.name ?? `CI-Agent #${value}`}</span>
       </span>
     );
   }

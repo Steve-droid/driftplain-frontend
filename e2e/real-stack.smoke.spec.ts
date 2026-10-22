@@ -31,8 +31,8 @@ test('real backend: public catalog, retired actions and empty runtime eligibilit
   await page.getByLabel('Password', { exact: true }).fill(CREDS.password);
   await page.getByRole('button', { name: 'Sign in', exact: true }).click();
   await expect(page.getByText('Weighted recommendations have been retired.')).toBeVisible();
-  await page.getByRole('link', { name: 'Set Up CI', exact: true }).click();
-  await page.getByLabel('Task', { exact: true }).selectOption('ci_review');
+  await page.getByRole('link', { name: 'Set Up CI', exact: true }).last().click();
+  await page.getByRole('radio', { name: 'PR review', exact: true }).check();
   await expect(page.getByText(/No eligible/).first()).toBeVisible();
   await expect(page.getByRole('button', { name: 'Get recommendation' })).toHaveCount(0);
 });

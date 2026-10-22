@@ -6,23 +6,26 @@ export function ChartCard({
   title,
   hint,
   legend,
+  ariaLabel,
   children,
 }: {
   title: string;
   hint?: string;
   legend?: ReactNode;
+  /** Names the card as a landmark region (tests and screen readers find it by name). */
+  ariaLabel?: string;
   children: ReactNode;
 }) {
   return (
-    <div className="card">
+    <section className="card" aria-label={ariaLabel}>
       <div className="mb-2 flex flex-wrap items-baseline justify-between gap-2">
-        <h3 className="text-sm font-medium text-gray-200">{title}</h3>
+        <h2 className="text-sm font-medium text-gray-200">{title}</h2>
         {hint && <span className="text-xs text-faint">{hint}</span>}
       </div>
       {legend && <div className="mb-3 flex flex-wrap gap-x-4 gap-y-1">{legend}</div>}
       {!legend && <div className="mb-3" />}
       {children}
-    </div>
+    </section>
   );
 }
 
@@ -51,7 +54,7 @@ export const chartMargin = { top: 8, right: 12, left: 8, bottom: 0 } as const;
 // Recharts axis styling (faint, no heavy lines) — spread onto <XAxis>/<YAxis>.
 export const axisProps = {
   stroke: "#6e7680",
-  tick: { fill: "#9fa7b3", fontSize: 11 },
+  tick: { fill: "#9aa3af", fontSize: 11 },
   tickLine: false,
-  axisLine: { stroke: "#2c3235" },
+  axisLine: { stroke: "#252a31" },
 } as const;

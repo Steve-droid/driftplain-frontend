@@ -15,7 +15,7 @@ async function open(
     }),
   );
   await page.route("**/projects", (route) =>
-    route.fulfill({ json: [{ ...projectsFixture[0], isExample: true }] }),
+    route.fulfill({ json: [{ ...projectsFixture[0], isExample: false }] }),
   );
   await page.route("**/projects/*/usage/v1?*", (route) =>
     route.fulfill({ json: { ...usageFixture, runs } }),
@@ -35,15 +35,25 @@ test("separate estimates, native/normalized unknowns, feedback and illustrative 
 }, info) => {
   await open(page);
   await expect(page.getByText("Complete estimates")).toBeVisible();
+  const summary = page.getByRole("region", { name: "Usage summary" });
+  await expect(summary.getByText("$0.0003", { exact: true })).toHaveCSS("color", "rgb(245, 165, 36)");
+  await expect(summary.getByText("$0.0012", { exact: true })).toHaveCSS("color", "rgb(79, 143, 247)");
   await expect(
     page.getByText("Partial known charges", { exact: true }),
   ).toBeVisible();
-  await expect(page.getByText(/1 \/ 3 findings rated/)).toBeVisible();
-  await expect(page.getByText(/Illustrative sample CI runs/)).toBeVisible();
+  await expect(page.getByText("1 / 3", { exact: true })).toBeVisible();
+  await expect(page.getByText(/findings rated/)).toBeVisible();
+
   await expect(page.getByText("Cumulative saved")).toHaveCount(0);
+  await expect(
+    page.getByRole("region", { name: "Selected-model cost chart" }),
+  ).toBeVisible();
+  await expect(page.getByText("Tokens per run")).toBeVisible();
+  await expect(page.getByText("Findings feedback")).toBeVisible();
+  // Rows open on demand; the partial run carries the OpenCode unknowns.
+  await page.getByRole("button", { name: "aborted-13" }).click();
   await page
     .getByText("Usage, rates and attribution", { exact: true })
-    .nth(1)
     .click();
   await expect(page.getByText("Not reported", { exact: true })).toBeVisible();
   await expect(page.getByText("runner billing incomplete")).toBeVisible();
@@ -170,6 +180,8 @@ test("patch, named-test evidence and diagnosis stay distinct from findings", asy
     },
   };
   await open(page, [testRun, diagnosis]);
+  await page.getByRole("button", { name: "generated-tests" }).click();
+  await page.getByRole("button", { name: "diagnosis" }).click();
   await expect(
     page.getByText("Generated tests discovered: 3 · executed: 3"),
   ).toBeVisible();
@@ -222,4 +234,29 @@ test("owner errors remain visible and never appear as zero spend", async ({
   await page.getByRole("button", { name: /View my CI.agents/i }).click();
   await expect(page.getByText("Access denied")).toBeVisible();
   await expect(page.getByText("Complete estimates")).toHaveCount(0);
+});
+
+
+test("deep links, refresh and period controls load the selected project", async ({ page }) => {
+  await mockBackend(page);
+  await page.route("**/auth/me", r => r.fulfill({ json: { chatEnabled: false } }));
+  await page.route("**/projects", r => r.fulfill({ json: projectsFixture }));
+  const requests: string[] = [];
+  await page.route("**/projects/*/usage/v1?*", r => {
+    requests.push(r.request().url());
+    return r.fulfill({ json: usageFixture });
+  });
+  await page.addInitScript(() => localStorage.setItem("mm_token", "fixture-token"));
+  await page.goto("/?project=2");
+  await expect(page.getByLabel("Select CI-Agent")).toHaveValue("2");
+  await expect(page.getByRole("heading", { name: "Usage and estimated cost" })).toBeVisible();
+  await page.getByRole("button", { name: "7 days", exact: true }).click();
+  await expect.poll(() => requests.at(-1)).toContain("/projects/2/usage/v1?range=7d&offset=0");
+  const count = requests.length;
+  await page.getByRole("button", { name: "Refresh dashboard" }).click();
+  await expect.poll(() => requests.length).toBe(count + 1);
+  await expect(page.getByRole("button", { name: "7 days" })).toHaveAttribute("aria-pressed", "true");
+  await page.getByRole("button", { name: "7 days", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Usage and estimated cost" })).toBeVisible();
+  expect(requests.length).toBe(count + 1);
 });

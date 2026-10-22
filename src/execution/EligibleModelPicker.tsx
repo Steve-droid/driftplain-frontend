@@ -55,9 +55,16 @@ export function CandidateEvidence({ item }: { item: Candidate }) {
     </div>
   );
 }
+const hints: Record<Profile["task"], string> = {
+  other: "Any model verified for this mode. No benchmark is matched to a custom task.",
+  ci_review: "Ranked by CodeReviewBench F1 when the evidence is directly comparable.",
+  security_analysis: "Verified models only; no comparable ranking exists yet, so the list is unranked.",
+  test_generation: "Python can be ranked by TestGenEval; Node has no ranking yet.",
+  ci_failure_diagnosis: "Verified models only; diagnosis has no primary ranking yet.",
+};
 const explanations: Record<Profile["task"], string> = {
   other:
-    "Choose a model for your custom task. Benchmark results help you compare models; Driftplain has not matched a benchmark to this task. Only exact support for the selected mode permits a choice.",
+    "Benchmark results help you compare models; Driftplain has not matched a benchmark to this task. Only exact support for the selected mode permits a choice.",
   ci_review:
     "CodeReviewBench F1 measures review findings against confirmed bugs. Recommendations require the same complete 30-PR / 95-bug Kodus replay protocol, judge and reasoning settings.",
   security_analysis:
@@ -67,6 +74,7 @@ const explanations: Record<Profile["task"], string> = {
   ci_failure_diagnosis:
     "Diagnosis and optional repair have no primary ranking at launch. LogDx-CI and CI-Repair-Bench are supplementary research, without recommendation badges.",
 };
+const SEARCH_DELAY_MS = 250;
 export function EligibleModelPicker({
   profile,
   onPick,
@@ -79,6 +87,7 @@ export function EligibleModelPicker({
   exact: { model: number | null; evidence: number | null };
 }) {
   const [q, setQ] = useState("");
+  const [query, setQuery] = useState("");
   const [group, setGroup] = useState<string | null>(null);
   const [offset, setOffset] = useState(0);
   const [retry, setRetry] = useState(0);
@@ -87,7 +96,13 @@ export function EligibleModelPicker({
     data?: Candidates;
     error?: string;
   }>({ key: "" });
-  const key = JSON.stringify([profile, q, group, offset, retry, exact]);
+  // Typing updates the box at once; the request waits until the user pauses.
+  useEffect(() => {
+    if (q === query) return;
+    const timer = setTimeout(() => setQuery(q), SEARCH_DELAY_MS);
+    return () => clearTimeout(timer);
+  }, [q, query]);
+  const key = JSON.stringify([profile, query, group, offset, retry, exact]);
   useEffect(() => {
     let live = true;
     const [p, query, g, start, , filter] = JSON.parse(key) as [
@@ -115,40 +130,53 @@ export function EligibleModelPicker({
       live = false;
     };
   }, [key, onUnauthorized]);
-  const data = state.key === key ? state.data : undefined;
+  // The last loaded page stays on screen while a new one is fetched, so the list
+  // does not blink away on every keystroke. Errors replace it.
+  const loading = state.key !== key;
+  const data = state.error ? undefined : state.data;
+  // Nothing is runnable for this profile at all: say so instead of offering a search.
+  const empty = !!data && data.total === 0 && !query && !group;
   return (
-    <section className="ci-panel" aria-label="Eligible model picker">
-      <h2>Pick an eligible model</h2>
-      <p>{explanations[profile.task]}</p>
-      {profile.task !== "other" && (
-        <details>
-          <summary>How recommendations work</summary>
+    <section
+      className="ci-panel"
+      aria-label="Eligible model picker"
+      aria-busy={loading}
+    >
+      <h2>Pick a model</h2>
+      <p className="ci-hint">{hints[profile.task]}</p>
+      <details className="ci-details">
+        <summary>Why these models?</summary>
+        <p>{explanations[profile.task]}</p>
+        {profile.task !== "other" && (
           <p>
             Scores only order eligible choices inside one explicitly selected
             comparable group. A benchmark runner is evidence, not this project's
             execution runner. Prices and speed never change this order.
           </p>
-        </details>
-      )}
-      <label>
-        Search these models
-        <input
-          value={q}
-          maxLength={200}
-          onChange={(e) => {
-            setQ(e.target.value);
-            setOffset(0);
-          }}
-          placeholder="Model or hosting provider"
-        />
-      </label>
-      {data && (
-        <>
+        )}
+        {data && (
           <p className="ci-muted">
             Policy {data.policy.version} ·{" "}
             {data.policy.benchmarkVersion ?? "No primary benchmark policy"}
           </p>
-          {profile.task !== "other" && (
+        )}
+      </details>
+      {!empty && (
+        <div className="ci-options">
+          <label>
+            Search these models
+            <input
+              type="search"
+              value={q}
+              maxLength={200}
+              onChange={(e) => {
+                setQ(e.target.value);
+                setOffset(0);
+              }}
+              placeholder="Model or hosting provider"
+            />
+          </label>
+          {data && profile.task !== "other" && (
             <label>
               Recommendation group
               <select
@@ -169,18 +197,22 @@ export function EligibleModelPicker({
               </select>
             </label>
           )}
+        </div>
+      )}
+      {data && (
+        <>
           {data.total === 0 ? (
-            <p role="status">
+            <p role="status" className="ci-empty">
               {exact.model
                 ? "Requested exact model has no eligible choice for this task, deployment or evidence."
-                : q
+                : query
                   ? "No eligible matches for this search. Clear the search to inspect the available set."
-                  : "No eligible runnable model for this profile. Pending integrations cannot be selected."}
+                  : "No eligible runnable model for this profile yet. Models become selectable once their runtime is verified; pending integrations cannot be selected."}
             </p>
           ) : (
             <>
               {!data.items.some((i) => i.method === "benchmark_ranked") && (
-                <p>
+                <p className="ci-hint">
                   {group
                     ? "No comparable recommendation score for the choices on this page."
                     : "No comparable recommendation score is selected."}{" "}
@@ -205,38 +237,45 @@ export function EligibleModelPicker({
                           ? "Recommended by benchmark score"
                           : "Supported · unranked"}
                       </h3>
-                      {rows.map((item) => (
-                        <article
-                          className="ci-model"
-                          key={`${item.runtimeId}:${item.observationId}`}
-                        >
-                          <h4>{item.model}</h4>
-                          <p>
-                            {item.provider} · {item.providerModelId} ·
-                            Deployment #{item.deploymentId}
-                          </p>
-                          {method === "benchmark_ranked" ? (
-                            <p>
-                              Rank {item.rank} · {data.policy.metric}:{" "}
-                              <strong>{item.score}</strong> (
-                              {data.policy.direction} is better). Source
-                              reported: {item.reportedValue ?? "Unknown"}.
-                            </p>
-                          ) : (
-                            <p>
-                              No task recommendation claimed for this choice.
-                            </p>
-                          )}
-                          <CandidateEvidence item={item} />
-                          <button
-                            className="primary-action"
-                            onClick={() => onPick(item)}
+                      <div className="ci-model-list">
+                        {rows.map((item) => (
+                          <article
+                            className="ci-model"
+                            key={`${item.runtimeId}:${item.observationId}`}
                           >
-                            Choose {item.model} · {item.provider} · evidence #
-                            {item.observationId}
-                          </button>
-                        </article>
-                      ))}
+                            <div className="ci-model-head">
+                              <h4>{item.model}</h4>
+                              {method === "benchmark_ranked" && (
+                                <span className="ci-rank">#{item.rank}</span>
+                              )}
+                            </div>
+                            <p className="ci-muted">
+                              {item.provider} · <code>{item.providerModelId}</code> ·
+                              Deployment #{item.deploymentId}
+                            </p>
+                            {method === "benchmark_ranked" ? (
+                              <p>
+                                Rank {item.rank} · {data.policy.metric}:{" "}
+                                <strong className="num">{item.score}</strong> (
+                                {data.policy.direction} is better). Source
+                                reported: {item.reportedValue ?? "Unknown"}.
+                              </p>
+                            ) : (
+                              <p className="ci-muted">
+                                No task recommendation claimed for this choice.
+                              </p>
+                            )}
+                            <CandidateEvidence item={item} />
+                            <button
+                              className="primary-action ci-choose"
+                              aria-label={`Choose ${item.model} · ${item.provider} · evidence #${item.observationId}`}
+                              onClick={() => onPick(item)}
+                            >
+                              Choose
+                            </button>
+                          </article>
+                        ))}
+                      </div>
                     </section>
                   );
                 },
@@ -263,8 +302,12 @@ export function EligibleModelPicker({
           )}
         </>
       )}
-      {state.key !== key && <p role="status">Checking eligibility…</p>}
-      {state.key === key && state.error && (
+      {loading && (
+        <p role="status" className="ci-muted">
+          {data ? "Updating…" : "Checking eligibility…"}
+        </p>
+      )}
+      {!loading && state.error && (
         <p role="alert">
           {state.error}{" "}
           <button
@@ -279,6 +322,7 @@ export function EligibleModelPicker({
         </p>
       )}
       <Link
+        className="text-link"
         href={`/benchmarks?setupReturn=${encodeURIComponent("/setup" + window.location.search)}`}
       >
         Inspect the full Explorer

@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { ApiError } from "../api/client";
 import { listProjects } from "../api/projects";
 import { connectJenkins, getJenkins } from "../api/jenkins";
-import { CatalogNav } from "../catalog/CatalogApp";
+import { AppHeader } from "../components/AppHeader";
 import { catalog } from "../catalog/api";
 import type { ModelDetail, Observation } from "../catalog/types";
 import { Link, navigate, updateParams } from "../catalog/navigation";
@@ -27,12 +27,13 @@ import {
   readIntent,
   saveDraft,
   selectionFor,
-  taskNames,
   type Draft,
 } from "./draft";
 import { CandidateEvidence, EligibleModelPicker } from "./EligibleModelPicker";
 import { OtherFields } from "./OtherFields";
 import { TaskFields } from "./TaskFields";
+import { TaskPicker } from "./TaskPicker";
+import { SetupSteps } from "./SetupSteps";
 import { ExecutionCommand } from "./ExecutionCommand";
 import "./execution.css";
 
@@ -349,18 +350,22 @@ export function ExecutionSetup({
       setChecking(false);
     }
   }
+  const stepNumber =
+    step === "jenkins" ? 4 : step === "command" ? 5 : !draft.task ? 1 : valid ? 3 : 2;
   return (
     <>
-      <CatalogNav />
+      <AppHeader current="setup" />
       <main className="ci-setup">
         <p className="eyebrow">
-          {intent.project ? "Edit CI project" : "Set up CI"}
+          {intent.project ? "Edit CI agent" : "New CI agent"}
         </p>
-        <h1>Choose a task. Pick an exact model.</h1>
+        <h1>{intent.project ? "Edit your CI agent" : "Set up a CI agent"}</h1>
         <p>
-          Only verified execution profiles can be selected. Catalog listings
-          alone do not make a model runnable.
+          Pick a task, choose a model backed by real benchmark results, then
+          paste the generated stage into Jenkins. Your API key never leaves
+          Jenkins.
         </p>
+        <SetupSteps current={stepNumber} />
         <div className="ci-actions">
           <Link href="/projects">Back to projects</Link>
           {step !== "pick" && (
@@ -383,18 +388,18 @@ export function ExecutionSetup({
           ) : step === "pick" ? (
             <>
               {intent.model && (
-                <aside className="ci-panel">
+                <aside className="ci-panel ci-origin">
                   <p>
-                    From Explorer:{" "}
+                    <strong>From Explorer:</strong>{" "}
                     {origin?.key === originKey
                       ? origin.name
                       : `Model #${intent.model}`}{" "}
                     {intent.evidence && `· exact evidence #${intent.evidence}`}
                   </p>
                   {origin?.error && <p role="alert">{origin.error}</p>}
-                  <p>
-                    Choose the task, then explicitly choose the hosting
-                    deployment. Related variants are never substituted.
+                  <p className="ci-hint">
+                    Choose a task, then pick this model's hosting deployment.
+                    Related variants are never substituted.
                   </p>
                   <button
                     onClick={() =>
@@ -406,23 +411,13 @@ export function ExecutionSetup({
                 </aside>
               )}
               <section className="ci-panel">
-                <label>
-                  Task
-                  <select
-                    aria-label="Task"
-                    value={draft.task ?? ""}
-                    onChange={(e) =>
-                      changeProfile((e.target.value as Task) || null)
-                    }
-                  >
-                    <option value="">Choose a task</option>
-                    {Object.entries(taskNames).map(([key, label]) => (
-                      <option key={key} value={key}>
-                        {label}
-                      </option>
-                    ))}
-                  </select>
-                </label>
+                <h2>What should the agent do?</h2>
+                <p className="ci-hint">Hover a task for a one-line description.</p>
+                <TaskPicker
+                  value={draft.task}
+                  onChange={(task: Task) => changeProfile(task)}
+                />
+                <div className="ci-options">
                 {draft.task === "other" && (
                   <label>
                     Execution mode
@@ -481,6 +476,7 @@ export function ExecutionSetup({
                     Propose a fix
                   </label>
                 )}
+                </div>
               </section>
               {profile && (
                 <EligibleModelPicker
@@ -493,28 +489,29 @@ export function ExecutionSetup({
               )}
               <form onSubmit={continueSetup}>
                 <section className="ci-panel">
-                  <h2>Selected configuration</h2>
+                  <h2>Your selection</h2>
                   {draft.label ? (
-                    <p>
+                    <p className={valid ? "ci-selected" : "ci-stale"}>
                       {valid ? "Selected: " : "Previous pick: "}
                       {draft.label}
-                      {!valid &&
-                        " — revalidation or an explicit new pick is required."}
+                      {!valid && " — pick a model again for this task."}
                     </p>
                   ) : (
-                    <p>
-                      No model selected. Choose a provider deployment and its
-                      evidence above.
+                    <p className="ci-hint">
+                      No model selected yet. Choose one from the list above.
                     </p>
                   )}
                   {valid && verified && (
                     <>
-                      <p>
+                      <p className="ci-hint">
                         {verified.item.method === "benchmark_ranked"
-                          ? `Benchmark-ranked selection · rank ${verified.item.rank} · score ${verified.item.score} · group ${verified.item.group}`
-                          : "Supported, unranked selection — no recommendation claim."}
+                          ? `Benchmark-ranked · rank ${verified.item.rank} · score ${verified.item.score} · group ${verified.item.group}`
+                          : "Supported, unranked — no recommendation claim."}
                       </p>
-                      <CandidateEvidence item={verified.item} />
+                      <details className="ci-details">
+                        <summary>Source evidence</summary>
+                        <CandidateEvidence item={verified.item} />
+                      </details>
                     </>
                   )}
                   <label>
@@ -558,9 +555,9 @@ export function ExecutionSetup({
           ) : step === "jenkins" ? (
             <>
               <h2>Connect Jenkins</h2>
-              <p>
-                Provider keys stay in Jenkins. Project configuration is saved
-                when you continue.
+              <p className="ci-hint">
+                Tell Driftplain where the job lives. Your provider key stays in
+                Jenkins; the configuration is saved when you continue.
               </p>
               <JenkinsConnectForm
                 initialBaseUrl={jenkins.baseUrl}
@@ -583,7 +580,7 @@ export function ExecutionSetup({
                     navigate("/projects");
                   }}
                 >
-                  Done — view projects
+                  Done — view my CI agents
                 </button>
               </>
             )

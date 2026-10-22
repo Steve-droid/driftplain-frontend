@@ -55,14 +55,14 @@ export function KpiCard({
     countTo !== undefined && format ? format(countTo) : (value ?? "—");
 
   return (
-    <div className="card flex flex-col gap-3">
+    <div className="card flex flex-col justify-between gap-4 p-6">
       <span className="text-xs font-medium tracking-wide text-muted">
         {label}
       </span>
       <div className={`num text-2xl font-semibold leading-none ${accent}`}>
         {display}
       </div>
-      {sub && <div className="text-xs text-muted">{sub}</div>}
+      {sub && <div className="text-xs leading-relaxed text-muted">{sub}</div>}
     </div>
   );
 }

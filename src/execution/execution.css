@@ -1,114 +1,223 @@
+/* CI setup. Tokens and primitives (buttons, header, eyebrow) live in index.css. */
 .ci-setup {
-  max-width: 1080px;
-  margin: auto;
-  padding: 36px 24px 80px;
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 32px 24px 80px;
   line-height: 1.6;
+  overflow-wrap: anywhere;
 }
 .ci-setup h1 {
-  font-size: clamp(1.7rem, 4vw, 2.7rem);
-  font-weight: 650;
-  margin: 8px 0 14px;
+  font-size: clamp(28px, 3.4vw, 38px);
+  line-height: 1.15;
+  font-weight: 600;
+  letter-spacing: -0.03em;
+  color: var(--fg-strong);
+  margin: 8px 0 10px;
+}
+.ci-setup h1 + p {
+  color: var(--muted);
+  font-size: 15px;
+  max-width: 680px;
 }
 .ci-setup h2 {
-  font-size: 1.3rem;
+  font-size: 16px;
   font-weight: 600;
-  margin-bottom: 12px;
+  letter-spacing: -0.01em;
+  color: var(--fg-strong);
+  margin-bottom: 8px;
 }
 .ci-setup h3 {
-  font-size: 1.1rem;
-  margin: 20px 0 10px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin: 24px 0 10px;
 }
 .ci-setup h4 {
-  font-weight: 650;
-  font-size: 1.1rem;
+  font-weight: 600;
+  font-size: 15px;
+  color: var(--fg-strong);
 }
 .ci-panel {
-  padding: 24px;
-  border: 1px solid var(--color-border, #303848);
-  border-radius: 16px;
-  margin: 22px 0;
-  background: var(--color-panel, #121925);
+  padding: 22px 24px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  margin: 20px 0;
+  background: var(--panel);
+}
+.ci-panel > p {
+  color: var(--muted);
 }
 .ci-setup label {
   display: flex;
   flex-direction: column;
-  gap: 7px;
+  gap: 6px;
   margin: 16px 0;
-  max-width: 760px;
+  max-width: 720px;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--muted);
 }
 .ci-setup input,
 .ci-setup textarea,
 .ci-setup select {
-  background: #0c1421;
-  color: #edf1f7;
-  border: 1px solid #435065;
-  border-radius: 8px;
-  padding: 10px;
+  background: var(--canvas);
+  color: var(--fg-strong);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 9px 12px;
+  font-size: 14px;
+  font-weight: 400;
   max-width: 100%;
   min-width: 0;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.ci-setup input:focus,
+.ci-setup textarea:focus,
+.ci-setup select:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
 }
 .ci-setup .ci-checkbox {
   flex-direction: row;
   align-items: center;
+  color: var(--fg);
+}
+.ci-setup .ci-checkbox input {
+  accent-color: var(--accent);
+}
+/* Unstyled buttons read as secondary actions. */
+.ci-setup button:not([class]) {
+  display: inline-flex;
+  align-items: center;
+  min-height: 34px;
+  padding: 6px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--panel-2);
+  color: var(--fg);
+  font-size: 13px;
+  font-weight: 500;
+  transition: border-color 0.15s, color 0.15s;
+}
+.ci-setup button:not([class]):hover:not(:disabled) {
+  border-color: var(--border-strong);
+  color: #fff;
+}
+.ci-model-list {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
 }
 .ci-model {
-  border-top: 1px solid #374154;
-  padding: 20px 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  column-gap: 20px;
+  padding: 16px 18px;
+  border-top: 1px solid var(--border);
+  background: var(--canvas);
+}
+.ci-model:first-child {
+  border-top: 0;
+}
+.ci-model > * {
+  grid-column: 1;
+}
+.ci-model > .ci-choose {
+  grid-column: 2;
+  grid-row: 1 / span 3;
+  align-self: start;
+}
+.ci-model-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.ci-rank {
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: var(--accent-soft);
+  color: var(--accent-text);
+  font-size: 11.5px;
+  font-weight: 600;
+}
+.ci-model p {
+  margin: 4px 0;
+}
+.ci-model code {
+  font-size: 12px;
 }
 .ci-evidence,
 .ci-muted {
-  font-size: 0.88rem;
-  color: #acb9cc;
+  font-size: 13px;
+  color: var(--muted);
 }
 .ci-evidence {
-  margin: 10px 0;
+  margin: 10px 0 0;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--panel);
+}
+.ci-evidence p {
+  margin: 2px 0;
 }
 .ci-actions {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  gap: 16px;
+  gap: 12px;
   margin: 18px 0;
+  color: var(--muted);
+  font-size: 13px;
 }
 .ci-setup button:disabled {
   opacity: 0.45;
   cursor: not-allowed;
 }
-.ci-setup button:focus-visible,
-.ci-setup a:focus-visible {
-  outline: 2px solid #82baff;
-  outline-offset: 4px;
-}
 .ci-setup pre {
   white-space: pre-wrap;
   overflow-wrap: anywhere;
-  background: #080d16;
+  background: var(--canvas);
+  border: 1px solid var(--border);
+  color: var(--fg);
   padding: 16px;
-  border-radius: 8px;
-  font-size: 0.8rem;
+  border-radius: var(--radius-sm);
+  font-size: 12.5px;
   margin: 14px 0;
 }
 .ci-setup [role="alert"] {
-  border-left: 3px solid #e8a77a;
-  padding: 10px 16px;
+  border: 1px solid #f0555f40;
+  border-radius: var(--radius-sm);
+  background: #f0555f0f;
+  padding: 10px 14px;
 }
 .ci-setup summary {
   cursor: pointer;
+  color: var(--accent-text);
+  font-size: 13px;
 }
 .ci-setup p {
   margin: 8px 0;
 }
-.ci-setup a {
-  color: #91c4ff;
+:where(.ci-setup a:not([class])) {
+  color: var(--accent-text);
+}
+:where(.ci-setup a:not([class])):hover {
+  color: #fff;
 }
 .ci-setup .primary-action,
 .ci-setup .secondary-action {
-  display: inline-block;
   margin-top: 8px;
+}
+.ci-setup .ci-choose {
+  margin-top: 0;
 }
 @media (max-width: 600px) {
   .ci-setup {
-    padding: 24px 14px;
+    padding: 24px 16px 64px;
   }
   .ci-panel {
     padding: 16px;
@@ -117,12 +226,279 @@
     white-space: normal;
     text-align: left;
   }
+  .ci-model {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .ci-model > .ci-choose {
+    grid-column: 1;
+    grid-row: auto;
+    margin-top: 12px;
+  }
 }
 /* Fieldsets default to min-content, which would let long evidence IDs widen mobile forms. */
 .ci-setup fieldset {
   min-width: 0;
   width: 100%;
 }
-.ci-setup {
-  overflow-wrap: anywhere;
+
+/* Setup progress: the whole path in one row, current step highlighted. */
+.ci-steps {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 4px;
+  margin: 22px 0 6px;
+  padding: 0;
+  list-style: none;
+  font-size: 12.5px;
+}
+.ci-step {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px 6px 6px;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  color: var(--faint);
+}
+.ci-step-marker {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  background: var(--panel);
+  font-size: 11px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.ci-step-current {
+  border-color: var(--border);
+  background: var(--panel);
+  color: var(--fg-strong);
+  font-weight: 500;
+}
+.ci-step-current .ci-step-marker {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: #fff;
+}
+.ci-step-done {
+  color: var(--muted);
+}
+.ci-step-done .ci-step-marker {
+  border-color: var(--banked);
+  color: var(--banked);
+}
+
+/* Task cards: a radio group with a hover tooltip per task. */
+.ci-tasks {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(168px, 1fr));
+  gap: 10px;
+  margin: 14px 0 4px;
+  padding: 0;
+  border: 0;
+}
+.ci-task {
+  position: relative;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--canvas);
+  transition: border-color 0.15s, background-color 0.15s;
+}
+.ci-task:hover {
+  border-color: var(--border-strong);
+}
+.ci-task-selected,
+.ci-task-selected:hover {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+.ci-task:focus-within {
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+.ci-setup .ci-task label {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 0;
+  padding: 14px 40px 14px 14px;
+  min-height: 92px;
+  cursor: pointer;
+  font-size: 13.5px;
+  color: var(--fg);
+}
+.ci-task-selected label {
+  color: var(--fg-strong);
+}
+/* The radio covers the whole card invisibly, so any click on it is a real click on the input. */
+.ci-setup .ci-task input[type="radio"] {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+.ci-task-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: var(--panel);
+  color: var(--signal);
+}
+.ci-task-selected .ci-task-icon {
+  border-color: var(--accent);
+  color: var(--accent-text);
+}
+.ci-task-name {
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+.ci-tip {
+  position: absolute;
+  z-index: 1;
+  top: 10px;
+  right: 10px;
+}
+.ci-setup .ci-tip-trigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--faint);
+  cursor: help;
+}
+.ci-task:hover .ci-tip-trigger,
+.ci-tip-open .ci-tip-trigger {
+  color: var(--fg-strong);
+}
+.ci-tip-bubble {
+  position: absolute;
+  z-index: 20;
+  top: calc(100% + 8px);
+  right: 0;
+  width: 240px;
+  padding: 10px 12px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--panel-2);
+  color: var(--fg);
+  font-size: 12.5px;
+  font-weight: 400;
+  line-height: 1.45;
+  box-shadow: 0 12px 32px #00000066;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(-4px);
+  transition: opacity 0.12s, transform 0.12s;
+}
+.ci-task:hover .ci-tip-bubble,
+.ci-task:focus-within .ci-tip-bubble,
+.ci-tip-open .ci-tip-bubble {
+  opacity: 1;
+  transform: none;
+}
+
+/* Sub-options and picker controls sit on one row when they fit. */
+.ci-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 20px;
+}
+.ci-options:empty {
+  display: none;
+}
+.ci-setup .ci-options > label {
+  flex: 1 1 220px;
+  min-width: 0;
+  margin: 12px 0 4px;
+}
+.ci-setup .ci-options select,
+.ci-setup .ci-options input:not([type="checkbox"]) {
+  width: 100%;
+}
+.ci-setup .ci-options > .ci-checkbox {
+  flex: 0 0 auto;
+  align-self: end;
+  gap: 8px;
+  margin-bottom: 12px;
+  white-space: nowrap;
+}
+.ci-hint {
+  margin: 4px 0 0;
+  color: var(--muted);
+  font-size: 12.5px;
+  line-height: 1.5;
+}
+.ci-setup .ci-panel > .ci-hint {
+  margin: 0 0 4px;
+}
+.ci-field {
+  margin: 0;
+}
+.ci-field > label {
+  margin-bottom: 0;
+}
+.ci-field > .ci-hint {
+  max-width: 720px;
+  margin-bottom: 16px;
+}
+.ci-details {
+  margin: 12px 0;
+}
+.ci-details > p {
+  margin: 8px 0 0;
+  color: var(--muted);
+  font-size: 13px;
+}
+.ci-details > .ci-evidence {
+  margin-top: 8px;
+}
+.ci-selected {
+  color: var(--fg-strong);
+}
+.ci-stale {
+  color: var(--unrated);
+}
+.ci-empty {
+  color: var(--muted);
+}
+.ci-origin {
+  border-color: #5fb4cc40;
+}
+.ci-origin strong {
+  color: var(--fg-strong);
+  font-weight: 600;
+}
+@media (max-width: 600px) {
+  .ci-steps {
+    gap: 4px 0;
+  }
+  .ci-step {
+    padding-right: 8px;
+  }
+  .ci-step-todo .ci-step-label,
+  .ci-step-done .ci-step-label {
+    display: none;
+  }
+  .ci-tasks {
+    grid-template-columns: 1fr 1fr;
+  }
+  .ci-tip-bubble {
+    width: 200px;
+  }
 }

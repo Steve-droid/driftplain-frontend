@@ -12,7 +12,20 @@ export const taskNames: Record<Task, string> = {
   security_analysis: "Security analysis",
   test_generation: "Test generation",
   ci_failure_diagnosis: "CI failure diagnosis",
-  other: "Other — define your own task",
+  other: "Custom task",
+};
+/** One plain sentence per task, shown as a hover tooltip on the task cards. */
+export const taskDescriptions: Record<Task, string> = {
+  ci_review:
+    "Reads a pull request diff and leaves review comments on bugs and risks. It never edits your code.",
+  security_analysis:
+    "Scans a read-only copy of your source tree for vulnerabilities and reports what it finds.",
+  test_generation:
+    "Writes new test files for the source files you choose, then runs them in your validation image.",
+  ci_failure_diagnosis:
+    "When a CI stage fails, explains why from the log and can propose a fix for you to review.",
+  other:
+    "Describe your own task. Runs as one report-only model call, or with OpenCode for disposable edits.",
 };
 export function profileFor(
   task: Task,

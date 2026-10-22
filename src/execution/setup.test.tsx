@@ -72,9 +72,7 @@ beforeEach(() => {
 });
 it("searches eligible models directly and requires an explicit provider/evidence choice", async () => {
   render(<ExecutionSetup />);
-  fireEvent.change(screen.getByLabelText("Task"), {
-    target: { value: "ci_review" },
-  });
+  fireEvent.click(screen.getByLabelText("PR review"));
   fireEvent.change(await screen.findByLabelText("Search these models"), {
     target: { value: "Alpha" },
   });
@@ -108,16 +106,12 @@ it("searches eligible models directly and requires an explicit provider/evidence
 });
 it("invalidates a pick immediately on profile changes and keeps its label visible", async () => {
   render(<ExecutionSetup />);
-  fireEvent.change(screen.getByLabelText("Task"), {
-    target: { value: "ci_review" },
-  });
+  fireEvent.click(screen.getByLabelText("PR review"));
   fireEvent.click(
     await screen.findByRole("button", { name: /Choose Exact Alpha/ }),
   );
   await waitFor(() => expect(revalidate).toHaveBeenCalled());
-  fireEvent.change(screen.getByLabelText("Task"), {
-    target: { value: "ci_failure_diagnosis" },
-  });
+  fireEvent.click(screen.getByLabelText("CI failure diagnosis"));
   expect(screen.getByText(/Previous pick: Exact Alpha/)).toBeInTheDocument();
   expect(
     screen.getByRole("button", { name: "Continue to Jenkins" }),
@@ -140,9 +134,7 @@ it("keeps an unsupported explorer model visible without substituting another var
   window.history.replaceState(null, "", "/setup?model=99&evidence=44");
   vi.mocked(candidates).mockResolvedValue({ ...page, items: [], total: 0 });
   render(<ExecutionSetup />);
-  fireEvent.change(screen.getByLabelText("Task"), {
-    target: { value: "ci_review" },
-  });
+  fireEvent.click(screen.getByLabelText("PR review"));
   expect(
     await screen.findByText(/Requested exact model has no eligible choice/),
   ).toBeInTheDocument();
@@ -153,9 +145,7 @@ it("keeps an unsupported explorer model visible without substituting another var
 it("distinguishes an empty runnable set from missing scores", async () => {
   vi.mocked(candidates).mockResolvedValue({ ...page, items: [], total: 0 });
   render(<ExecutionSetup />);
-  fireEvent.change(screen.getByLabelText("Task"), {
-    target: { value: "security_analysis" },
-  });
+  fireEvent.click(screen.getByLabelText("Security analysis"));
   expect(
     await screen.findByText(/No eligible runnable model/),
   ).toBeInTheDocument();
@@ -193,9 +183,7 @@ it("renders the admitted score order and exact precision separately from unranke
       : [row],
   }));
   render(<ExecutionSetup />);
-  fireEvent.change(screen.getByLabelText("Task"), {
-    target: { value: "ci_review" },
-  });
+  fireEvent.click(screen.getByLabelText("PR review"));
   fireEvent.change(await screen.findByLabelText("Recommendation group"), {
     target: { value: "g1" },
   });
@@ -246,9 +234,7 @@ it("revalidates a restored choice and blocks disabled choices without replacing 
 
 it("offers literal custom templates, keeps author text on mode change and requires a fresh pick", async () => {
   render(<ExecutionSetup />);
-  fireEvent.change(screen.getByLabelText("Task"), {
-    target: { value: "other" },
-  });
+  fireEvent.click(screen.getByLabelText("Custom task"));
   fireEvent.change(screen.getByLabelText("Editable starter template"), {
     target: { value: "release" },
   });
