@@ -119,6 +119,10 @@
   border-top: 1px solid var(--border);
   background: var(--canvas);
 }
+.ci-model-chosen {
+  background: var(--accent-soft);
+  box-shadow: inset 3px 0 0 var(--accent);
+}
 .ci-model:first-child {
   border-top: 0;
 }
