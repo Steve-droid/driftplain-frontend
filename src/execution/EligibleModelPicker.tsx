@@ -46,11 +46,6 @@ export function CandidateEvidence({ item }: { item: Candidate }) {
       <p>
         {o.version ?? "Version unknown"} · {o.sourceName ?? "Source unknown"}
       </p>
-      <p>
-        Published {o.sourcePublicationDate ?? "Unknown"} · Retrieved{" "}
-        {o.sourceFetchedAt?.slice(0, 10) ?? "Unknown"} · Snapshot #
-        {item.snapshotId}
-      </p>
       <EvidenceDetails observation={o} />
     </div>
   );
@@ -75,16 +70,27 @@ const explanations: Record<Profile["task"], string> = {
     "Diagnosis and optional repair have no primary ranking at launch. LogDx-CI and CI-Repair-Bench are supplementary research, without recommendation badges.",
 };
 const SEARCH_DELAY_MS = 250;
+function isChosen(
+  item: Candidate,
+  selected?: { runtimeId: number; observationId: number } | null,
+) {
+  return (
+    selected?.runtimeId === item.runtimeId &&
+    selected.observationId === item.observationId
+  );
+}
 export function EligibleModelPicker({
   profile,
   onPick,
   onUnauthorized,
   exact,
+  selected,
 }: {
   profile: Profile;
   onPick: (item: Candidate) => void;
   onUnauthorized?: () => void;
   exact: { model: number | null; evidence: number | null };
+  selected?: { runtimeId: number; observationId: number } | null;
 }) {
   const [q, setQ] = useState("");
   const [query, setQuery] = useState("");
@@ -240,7 +246,11 @@ export function EligibleModelPicker({
                       <div className="ci-model-list">
                         {rows.map((item) => (
                           <article
-                            className="ci-model"
+                            className={
+                              isChosen(item, selected)
+                                ? "ci-model ci-model-chosen"
+                                : "ci-model"
+                            }
                             key={`${item.runtimeId}:${item.observationId}`}
                           >
                             <div className="ci-model-head">
@@ -269,9 +279,10 @@ export function EligibleModelPicker({
                             <button
                               className="primary-action ci-choose"
                               aria-label={`Choose ${item.model} · ${item.provider} · evidence #${item.observationId}`}
+                              aria-pressed={isChosen(item, selected)}
                               onClick={() => onPick(item)}
                             >
-                              Choose
+                              {isChosen(item, selected) ? "Chosen ✓" : "Choose"}
                             </button>
                           </article>
                         ))}

@@ -104,6 +104,24 @@ it("searches eligible models directly and requires an explicit provider/evidence
   ).toBeInTheDocument();
   expect(createExecutionProject).not.toHaveBeenCalled();
 });
+it("marks the chosen card and scrolls to the selection without the snapshot line", async () => {
+  const scroll = vi.fn();
+  Element.prototype.scrollIntoView = scroll;
+  render(<ExecutionSetup />);
+  fireEvent.click(screen.getByLabelText("PR review"));
+  const choose = await screen.findByRole("button", {
+    name: /Choose Exact Alpha/,
+  });
+  await screen.findByText(/Source & settings/);
+  expect(screen.queryByText(/Snapshot #/)).not.toBeInTheDocument();
+  expect(screen.queryByText(/Published .* Retrieved/)).not.toBeInTheDocument();
+  expect(choose).toHaveAttribute("aria-pressed", "false");
+  fireEvent.click(choose);
+  expect(choose).toHaveAttribute("aria-pressed", "true");
+  expect(choose).toHaveTextContent("Chosen");
+  expect(choose.closest("article")).toHaveClass("ci-model-chosen");
+  expect(scroll).toHaveBeenCalled();
+});
 it("invalidates a pick immediately on profile changes and keeps its label visible", async () => {
   render(<ExecutionSetup />);
   fireEvent.click(screen.getByLabelText("PR review"));

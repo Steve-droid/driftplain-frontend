@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ApiError } from "../api/client";
 import { listProjects } from "../api/projects";
 import { connectJenkins, getJenkins } from "../api/jenkins";
@@ -72,6 +72,7 @@ export function ExecutionSetup({
   } | null>(null);
   const [checking, setChecking] = useState(false);
   const [pickVersion, setPickVersion] = useState(0);
+  const selectionPanel = useRef<HTMLElement>(null);
   const profile = draft.task
     ? profileFor(draft.task, draft.language, draft.fix, draft.mode)
     : null;
@@ -270,6 +271,11 @@ export function ExecutionSetup({
       selection: selectionFor(profile, item),
       label: `${item.model} · ${item.provider} · deployment #${item.deploymentId} · evidence #${item.observationId}`,
     }));
+    // The confirmation renders below the model list; bring it into view.
+    selectionPanel.current?.scrollIntoView?.({
+      behavior: "smooth",
+      block: "start",
+    });
   }
   const valid =
     !!profile &&
@@ -485,10 +491,11 @@ export function ExecutionSetup({
                   onPick={pick}
                   onUnauthorized={onUnauthorized}
                   exact={{ model: intent.model, evidence: intent.evidence }}
+                  selected={draft.selection}
                 />
               )}
               <form onSubmit={continueSetup}>
-                <section className="ci-panel">
+                <section className="ci-panel" ref={selectionPanel}>
                   <h2>Your selection</h2>
                   {draft.label ? (
                     <p className={valid ? "ci-selected" : "ci-stale"}>
